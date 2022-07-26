@@ -1,10 +1,12 @@
-# Hourglass
+## Hourglass
 A calendar & to-do list application
 
-## Requirements
+
+### Requirements
 Python version 3.10.5+
 
-## Features
+
+### Features
 What can you do using Hourglass?
 - Add and remove events on your schedule
 - Add and remove tasks on your to-do list
