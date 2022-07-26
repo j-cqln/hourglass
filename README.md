@@ -1,8 +1,12 @@
-# hourglass
-a calendar & to-do list application
+# Hourglass
+A calendar & to-do list application
 
-## features
-- add and remove events on your schedule
-- add and remove tasks on your to-do list
-- events have custom colors
-- supports light and dark mode
+## Requirements
+Python version 3.10.5+
+
+## Features
+What can you do using Hourglass?
+- Add and remove events on your schedule
+- Add and remove tasks on your to-do list
+- Set custom colors for events
+- Supports light and dark mode
