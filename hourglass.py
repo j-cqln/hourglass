@@ -470,7 +470,7 @@ class Hourglass:
 
     def _schedule_read(self):
         """
-        Read from schedule file
+        Reads from schedule file
         """
         self._schedule = {}
 
@@ -484,7 +484,7 @@ class Hourglass:
     
     def _schedule_write(self):
         """
-        Write into schedule file
+        Writes into schedule file
         """
         self._schedule_file.seek(0)
         self._schedule_file.truncate()
@@ -497,7 +497,7 @@ class Hourglass:
     
     def _schedule_add(self, event_date, event_time, event_hex, event_description):
         """
-        Add an event to the schedule
+        Adds an event to the schedule
 
         event_date: Date, yyyymmdd, string
         event_time: Time, hhmm, string
@@ -510,7 +510,7 @@ class Hourglass:
 
     def _schedule_remove(self, event_date, event_time, event_hex, event_description):
         """
-        Remove an event from the schedule
+        Removes an event from the schedule
 
         event_date: Date, yyyymmdd, string
         event_time: Time, hhmm, string
@@ -715,7 +715,7 @@ class Hourglass:
     
     def _event_entry_focus(self, *args):
         """
-        Focus on the event entry widget, remove prompt text if it is displayed
+        Focuses on the event entry widget, remove prompt text if it is displayed
         """
         if self._event_entry.get() == ' add new event...':
             self._event_entry.delete(1, tk.END)
@@ -724,7 +724,7 @@ class Hourglass:
 
     def _event_entry_unfocus(self, *args):
         """
-        Unfocus from the event entry widget, restoring prompt text if no text entered
+        Unfocuses from the event entry widget, restoring prompt text if no text entered
         """
         if self._event_entry.get() == '' or self._event_entry.get() == ' ':
             self._event_entry.delete(0, tk.END)
@@ -745,7 +745,7 @@ class Hourglass:
     
     def _update_time_date_menu(self, *args):
         """
-        Update event day options based on currently selected year and month
+        Updates event day options based on currently selected year and month
         """
         event_year = int(self._current_event_year.get())
 
@@ -770,7 +770,7 @@ class Hourglass:
     
     def _to_do_read(self):
         """
-        Read from to-do list file
+        Reads from to-do list file
         """
         self._to_do_list = []
         lines = self._to_do_list_file.readlines()
@@ -782,7 +782,7 @@ class Hourglass:
 
     def _to_do_write(self):
         """
-        Write to to-do list file
+        Writes to to-do list file
         """
         self._to_do_list_file.seek(0)
         self._to_do_list_file.truncate()
@@ -794,7 +794,7 @@ class Hourglass:
 
     def _to_do_list_toggle(self, item):
         """
-        Toggle the check box for an item
+        Toggles the check box for an item
 
         item: To-do list item, string
         """
@@ -812,7 +812,7 @@ class Hourglass:
     
     def _to_do_list_add(self, item):
         """
-        Add an item to the to-do list
+        Adds an item to the to-do list
 
         item: Item to be added, string
         """
@@ -822,7 +822,7 @@ class Hourglass:
     
     def _to_do_list_remove(self, item):
         """
-        Remove an item from the to-do list
+        Removes an item from the to-do list
 
         item: Item to be removed, string
         """
@@ -841,7 +841,7 @@ class Hourglass:
     
     def _to_do_entry_focus(self, *args):
         """
-        Focus on the to-do entry widget, remove prompt text if it is displayed
+        Focuses on the to-do entry widget, remove prompt text if it is displayed
         """
         if self._to_do_entry.get() == ' add new to-do...':
             self._to_do_entry.delete(1, tk.END)
@@ -850,7 +850,7 @@ class Hourglass:
 
     def _to_do_entry_unfocus(self, *args):
         """
-        Unfocus from the to-do entry widget, restoring prompt text if no text entered
+        Unfocuses from the to-do entry widget, restoring prompt text if no text entered
         """
         if self._to_do_entry.get() == '' or self._to_do_entry.get() == ' ':
             self._to_do_entry.delete(0, tk.END)
@@ -896,7 +896,7 @@ class Hourglass:
     
     def _choose_color(self, *args):
         """
-        Select color for event
+        Selects color for event
         """
         self._color_selection_dialog = askcolor(title='choose new event color...')
         self._color_selection_label.config({'background': self._color_selection_dialog[1]})
@@ -908,7 +908,7 @@ class Hourglass:
 
     def _set_theme_mode(self, change=True, *args):
         """
-        Set theme mode for application
+        Sets theme mode for application
 
         change: Whether to change between light/dark mode, boolean
         """
@@ -926,7 +926,7 @@ class Hourglass:
     
     def _set_colors(self, darkmode):
         """
-        Set colors used by application
+        Sets colors used by application
         """
         if darkmode:
             # Dark mode colors
@@ -953,7 +953,7 @@ class Hourglass:
     
     def _change_colors(self, parent=None):
         """
-        Change colors for widget and all descendant widgets based on current theme mode
+        Changes colors for widget and all descendant widgets based on current theme mode
 
         parent: Widget to change color for, tkinter widget
         """
@@ -1008,7 +1008,7 @@ class Hourglass:
     
     def _clear_day(self, parent):
         """
-        Clear displayed events of a day
+        Clears displayed events of a day
 
         parent: The day to clear, tk.Frame
         """
@@ -1019,7 +1019,7 @@ class Hourglass:
     
     def _clear_to_do_list_display(self):
         """
-        Clear displayed to-do list items
+        Clears displayed to-do list items
         """
         for child in self._to_do_list_frame.winfo_children():
             child.destroy()
@@ -1067,13 +1067,13 @@ class Hourglass:
     
     def _show_how_to(self, *args):
         """
-        Display how-to message
+        Displays how-to message
         """
         msg = messagebox.showinfo('your hourglass', 'press enter to add event/task\nright click to remove\n\nclick on days in monthly calendar to display events for that week\n\nsun/moon → light/dark mode\npencil → custom event color')
     
     def _show_error(self, message):
         """
-        Display error with given message
+        Displays error with given message
 
         message: Error message, string
         """
