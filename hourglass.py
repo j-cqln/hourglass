@@ -1,6 +1,7 @@
 # Libraries
 import os
 import sys
+import uuid
 import calendar
 import datetime
 
@@ -118,8 +119,12 @@ class Hourglass:
         self._set_theme_mode(change=False)
 
         # Allow all components of the GUI to be focusable on left click
-        self._root.bind_all('<Button-1>', lambda event:event.widget.focus_set())
+        self._root.bind_all('<Button-1>', lambda event: event.widget.focus_set())
 
+        # Set up notification function
+        self._notify()
+
+        # Application loop
         self._root.mainloop()
 
         # If the files do not exist, create them then open and write; if they do exist, simply open and write
@@ -150,9 +155,46 @@ class Hourglass:
         """
         # Set title using current month and year
         self._now = datetime.datetime.now()
-        self._root.title('hourglass  -  ' + calendar.month_name[int(self._now.strftime('%m'))].lower() + self._now.strftime(' %Y'))
+        self._root.title('hourglass  -  ' + self._now.strftime('%B %Y').lower())
 
+        # Update again after 1 second
         self._root.after(1000, self._set_title)
+    
+    def _notify(self):
+        """
+        Checks for upcoming events and notifies user
+        """
+        self._now = datetime.datetime.now()
+        
+        try:
+            # Check for upcoming events in the current day and the next day
+            for i in range(2):
+                date = self._now + datetime.timedelta(days=i)
+                year = date.strftime('%Y')
+                month = date.strftime('%m')
+                day = date.strftime('%d')
+
+                key = (year, month, day)
+                value = self._schedule.get(key)
+
+                if value is not None:
+                    for event_id, event_info in value.items():
+                        delta = datetime.datetime(year=int(year), month=int(month), day=int(day), hour=int(event_info.get('hour')), minute=int(event_info.get('minute'))) - self._now
+                        
+                        # Ten minute notification
+                        if delta.total_seconds() < 600 and delta.total_seconds() > 60 and event_info.get('ten_minute_notified') is False:
+                            event_info['ten_minute_notified'] = True
+                            messagebox.showinfo(message='in ' + str(max(2, int(delta.total_seconds() / 60))) + ' minutes:\n' + event_info.get('description'))
+                        
+                        # One minute notification
+                        elif delta.total_seconds() < 60 and delta.total_seconds() > 0 and event_info.get('one_minute_notified') is False:
+                            event_info['one_minute_notified'] = True
+                            messagebox.showinfo(message='in 1 minute:\n' + event_info.get('description'))
+        except:
+            pass
+        
+        # Update again after 1 second
+        self._root.after(1000, self._notify)
     
     def _week_setup(self):
         """
@@ -205,7 +247,7 @@ class Hourglass:
         self._week_day_time_references = [[] for _ in range(self._NUMBER_DAYS_IN_WEEK)]
 
         for i in range(self._NUMBER_DAYS_IN_WEEK):
-            # Label for week day and date
+            # Label for the day of the week and the date
             self._week_days_labels.append(tk.Label(self._week_frame, anchor='w'))
 
             # Frame for each day
@@ -472,64 +514,79 @@ class Hourglass:
         """
         Reads from schedule file
         """
+        # Schedule dictionary
+        # {(year, month, day): {{event_id: {event_info}},
+        #                       {event_id: {event_info}}, ... }}
         self._schedule = {}
 
+        # Read events from file
         lines = self._schedule_file.readlines()
 
         for line in lines:
-            key = line[:8]
-            self._schedule.setdefault(key, []).append(line[8:].rstrip())
+            key = (line[:4], line[4:6], line[6:8])
+            event_id = str(uuid.uuid4())
+            event_info = {'hour': line[8:10], 'minute': line[10:12], 'hex_color': line[12:19], 'description': line[19:].rstrip(), 'ten_minute_notified': False, 'one_minute_notified': False}
+            
+            self._schedule.setdefault(key, {}).update({event_id: event_info})
         
+        # Close schedule file
         self._schedule_file.close()
     
     def _schedule_write(self):
         """
         Writes into schedule file
         """
+        # Clear schedule file
         self._schedule_file.seek(0)
         self._schedule_file.truncate()
 
-        for key, value in self._schedule.items():
-            for item in value:
-                self._schedule_file.write(key + item.rstrip() + '\n')
+        # Write events into file
+        for key in self._schedule:
+            for event_id, event_info in self._schedule[key].items():
+                line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('hex_color') + event_info.get('description').rstrip() + '\n'
+                self._schedule_file.write(line)
         
+        # Close schedule file
         self._schedule_file.close()
     
-    def _schedule_add(self, event_date, event_time, event_hex, event_description):
+    def _schedule_add(self, key, hour, minute, hex_color, description):
         """
         Adds an event to the schedule
 
-        event_date: Date, yyyymmdd, string
-        event_time: Time, hhmm, string
-        event_hex: Hex color, string
-        event_description: Event description, string
+        key: Tuple of strings, (yyyy, mm, dd)
+        hour: Hour, hh, string
+        minute: Minute, mm, string
+        hex_color: Hex color, string
+        description: Event description, string
         """
-        key = event_date
-        self._schedule.setdefault(key, []).append(event_time + event_hex + event_description)
-        self._update_week()
+        # Add event
+        event_id = str(uuid.uuid4())
+        event_info = {'hour': hour, 'minute': minute, 'hex_color': hex_color, 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
 
-    def _schedule_remove(self, event_date, event_time, event_hex, event_description):
+        self._schedule.setdefault(key, {}).update({event_id: event_info})
+
+        # Update displayed week
+        self._update_week()
+    
+    def _schedule_remove(self, key, event_id):
         """
         Removes an event from the schedule
 
-        event_date: Date, yyyymmdd, string
-        event_time: Time, hhmm, string
-        event_hex: Hex color, string
-        event_description: Event description, string
+        key: Tuple of strings, (yyyy, mm, dd)
+        event_id: unique identifier of the event, UUID
         """
-        popup = messagebox.askokcancel('remove event?', 'you are about to remove the event "' + event_description + '" at ' + event_time[:2] + ':' + event_time[2:] + ' on ' + event_date[4:6] + '/' + event_date[6:] + '.', icon='warning')
+        try:
+            # Retrieve event info
+            value = self._schedule.get(key)
+            event_info = value.get(event_id)
 
-        # Remove if user selects OK
-        if popup:
-            try:
-                key = event_date
-                value = self._schedule.get(key)
-                event_string = event_time + event_hex + event_description
+            popup = messagebox.askokcancel('remove event?', 'you are about to remove the event "' + self._schedule[key][event_id]['description'] + '" at ' + self._schedule[key][event_id]['hour'] + ':' + self._schedule[key][event_id]['minute'] + ' on ' + key[1] + '/' + key[2] + '.', icon='warning')
 
-                if value is not None and event_string in value:
-                    del self._schedule[key][value.index(event_string)]
-            except:
-                self._show_error('no such scheduled event.')
+            # Remove if user selects OK
+            if popup and value is not None and event_info is not None:
+                del self._schedule[key][event_id]
+        except:
+            self._show_error('no such scheduled event.')
         
         # Update displayed week
         self._update_week()
@@ -603,21 +660,32 @@ class Hourglass:
         # Display scheduled events by day
         try:
             for i in range(self._NUMBER_DAYS_IN_WEEK):
+                # Clear the day
                 self._clear_day(self._week_days[i])
 
-                self._displayed_days[i] = str((self._displayed_sunday + datetime.timedelta(days=i)).strftime('%Y%m%d'))
-                self._week_days_labels[i].config(text=calendar.day_name[(i + self._NUMBER_DAYS_IN_WEEK - 1) % self._NUMBER_DAYS_IN_WEEK].lower() + ' ' + self._displayed_days[i][-2:])
+                # Display the day of the week and the date
+                displayed_day = self._displayed_sunday + datetime.timedelta(days=i)
+                year = displayed_day.strftime('%Y')
+                month = displayed_day.strftime('%m')
+                day = displayed_day.strftime('%d')
+                key = (year, month, day)
+
+                self._displayed_days[i] = key
+                self._week_days_labels[i].config(text=displayed_day.strftime('%A').lower() + ' ' + day)
                 
+                # Retrieve events for the day
                 events = self._schedule.get(self._displayed_days[i])
 
+                # Display each event
                 if events is not None:
-                    for item in events:
-                        self._week_events_labels[i].append(tk.Label(self._week_days[i], text=item[:2] + ':' + item[2:4] + ' ' + item[11:].rstrip(), justify='left'))
-                        self._week_events_labels[i][-1].config({'foreground': self._light_or_dark_mode_text(tuple(int(item[5:11][i:i+2], 16) for i in (0, 2, 4)))})
-                        self._week_events_labels[i][-1].config({'background': item[4:11]})
+                    for event_id, event_info in events.items():
+                        self._week_events_labels[i].append(tk.Label(self._week_days[i], text=event_info.get('hour') + ':' + event_info.get('minute') + ' ' + event_info.get('description').rstrip(), justify='left'))
+                        self._week_events_labels[i][-1].config({'foreground': self._light_or_dark_mode_text(tuple(int(event_info.get('hex_color')[1:][j:j + 2], 16) for j in (0, 2, 4)))})
+                        self._week_events_labels[i][-1].config({'background': event_info.get('hex_color')})
                         self._week_events_labels[i][-1].config({'wraplength': self._EVENT_LABEL_WRAPLENGTH})
-                        self._week_events_labels[i][-1].bind('<Button-2>', lambda event, i=i, item=item: self._schedule_remove(self._displayed_days[i], item[:4], item[4:11], item[11:].rstrip()))
-                        self._week_events_labels[i][-1].place(relx=0.05, rely=self._fraction_of_day(int(item[:2]), int(item[2:4])))
+                        self._week_events_labels[i][-1].bind('<Button-1>', lambda event: event.widget.lift())
+                        self._week_events_labels[i][-1].bind('<Button-2>', lambda event, key=key, event_id=event_id: self._schedule_remove(key, event_id))
+                        self._week_events_labels[i][-1].place(relx=0.05, rely=self._fraction_of_day(int(event_info.get('hour')), int(event_info.get('minute'))))
         except:
             self._show_error('unable to load or update events.')
     
@@ -699,10 +767,11 @@ class Hourglass:
         
         self._month_label.config({'text': ' '.join(calendar_list[:2])})
 
-        # Labels for days of the month
+        # Labels for weekdays
         for i in range(self._NUMBER_DAYS_IN_WEEK):
             self._calendar_week_days_labels[i].config({'text': calendar_list[i + 2]})
         
+        # Labels for days of the month
         for i in range(self._NUMBER_DISPLAY_WEEKS_IN_MONTH):
             for j in range(self._NUMBER_DAYS_IN_WEEK):
                 self._calendar_month_days_labels[i][j].config({'text': calendar_list[i * self._NUMBER_DAYS_IN_WEEK + j + 2 + self._NUMBER_DAYS_IN_WEEK]})
@@ -738,7 +807,7 @@ class Hourglass:
         When enter is pressed and focus is on the event entry widget, remove focus and add event
         """
         if self._event_entry.get() != ' add new event...':
-            self._schedule_add(self._get_event_date(), self._get_event_time(), self._current_event_hex, self._event_entry.get().lstrip())
+            self._schedule_add(self._get_event_date(), self._get_event_hour(), self._get_event_minute(), self._current_event_hex, self._event_entry.get().lstrip())
             self._event_entry.delete(0, tk.END)
 
         self._event_entry_unfocus()
@@ -749,6 +818,7 @@ class Hourglass:
         """
         event_year = int(self._current_event_year.get())
 
+        # Retrieve month without leading zero
         if self._current_event_month.get()[0] == '0':
             event_month = int(self._current_event_month.get()[1])
         else:
@@ -756,6 +826,7 @@ class Hourglass:
 
         self._dropdown_days = []
 
+        # Set options for day based on selected month and year
         for day in self._new_event_calendar.itermonthdays(event_year, event_month):
             if day != 0:
                 self._dropdown_days.append(str(day).zfill(2))
@@ -766,30 +837,37 @@ class Hourglass:
         self._day_selection_menu['menu'].delete(0, tk.END)
 
         for day in self._dropdown_days:
-            self._day_selection_menu['menu'].add_command(label=day, command=lambda value=day: self._current_event_day.set(value))
+            self._day_selection_menu['menu'].add_command(label=day, command=lambda day=day: self._current_event_day.set(day))
     
     def _to_do_read(self):
         """
         Reads from to-do list file
         """
+        # To-do list
         self._to_do_list = []
+
+        # Read from to-do list file
         lines = self._to_do_list_file.readlines()
 
         for line in lines:
             self._to_do_list.append(line.rstrip())
         
+        # Close to-do list file
         self._to_do_list_file.close()
 
     def _to_do_write(self):
         """
         Writes to to-do list file
         """
+        # Clear to-do list file
         self._to_do_list_file.seek(0)
         self._to_do_list_file.truncate()
 
+        # Write into to-do list file
         for item in self._to_do_list:
             self._to_do_list_file.write(item.rstrip() + '\n')
         
+        # Close to-do list file
         self._to_do_list_file.close()
 
     def _to_do_list_toggle(self, item):
@@ -1024,15 +1102,15 @@ class Hourglass:
         for child in self._to_do_list_frame.winfo_children():
             child.destroy()
     
-    def _fraction_of_day(self, h, m):
+    def _fraction_of_day(self, hour, minute):
         """
         Returns the fraction of the day corresponding to the given time
 
-        h: Hour, int
-        m: Minute, int
+        hour: Hour, int
+        minute: Minute, int
         return: Fraction of the day, float
         """
-        return (h * 60 + m) / (24 * 60)
+        return (hour * 60 + minute) / (24 * 60)
 
     def _light_or_dark_mode_text(self, rgb):
         """
@@ -1051,19 +1129,27 @@ class Hourglass:
     
     def _get_event_date(self):
         """
-        Returns the current event date entered
+        Returns the current event date entered as a tuple
 
-        return: Event date, yyyymmdd, string
+        return: Tuple of strings, (yyyy, mm, dd)
         """
-        return self._current_event_year.get() + self._current_event_month.get() + self._current_event_day.get()
+        return (self._current_event_year.get(), self._current_event_month.get(), self._current_event_day.get())
 
-    def _get_event_time(self):
+    def _get_event_hour(self):
         """
-        Returns the current event time entered
+        Returns the current event hour entered
 
-        return: Event time, hhmm, string
+        return: Event hour, hh, string
         """
-        return self._current_event_hour.get() + self._current_event_minute.get()
+        return self._current_event_hour.get()
+
+    def _get_event_minute(self):
+        """
+        Returns the current event minute entered
+
+        return: Event minute, mm, string
+        """
+        return self._current_event_minute.get()
     
     def _show_how_to(self, *args):
         """
