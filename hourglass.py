@@ -201,7 +201,7 @@ class Hourglass:
         Sets up the week component of the GUI on which events are displayed
         """
         # Frame for all week-related widgets
-        self._week_frame = tk.Frame(self._root, borderwidth=0)
+        self._week_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
         self._week_frame.grid(row=0, column=0, rowspan=2, padx=(6, 3), pady=(6, 3), ipadx=6, ipady=6, sticky='NWSE')
         
         self._week_frame.rowconfigure(0, weight=0)
@@ -225,19 +225,19 @@ class Hourglass:
         # Button to go to previous week
         self._previous_week_label = tk.Label(self._week_buttons_frame, text='← prev. ', justify='left', borderwidth=0, highlightthickness=0)
         self._previous_week_label.bind('<Button-1>', self._previous_week)
-        self._previous_week_label.bind('<ButtonRelease>', self._previous_week_release_button)
+        self._previous_week_label.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
         self._previous_week_label.grid(row=0, column=0, sticky='NWSE')
 
         # Button to go to current week
         self._current_week_label = tk.Label(self._week_buttons_frame, text=' current ', justify='center', borderwidth=0, highlightthickness=0)
         self._current_week_label.bind('<Button-1>', self._current_week)
-        self._current_week_label.bind('<ButtonRelease>', self._current_week_release_button)
+        self._current_week_label.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
         self._current_week_label.grid(row=0, column=1, sticky='NS')
 
         # Button to go to next week
         self._next_week_label = tk.Label(self._week_buttons_frame, text=' next →', justify='right', borderwidth=0, highlightthickness=0)
         self._next_week_label.bind('<Button-1>', self._next_week)
-        self._next_week_label.bind('<ButtonRelease>', self._next_week_release_button)
+        self._next_week_label.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
         self._next_week_label.grid(row=0, column=2, sticky='NWSE')
 
         # Display week widgets
@@ -253,6 +253,7 @@ class Hourglass:
             # Frame for each day
             self._week_days.append(tk.Frame(self._week_frame))
             self._week_days[i].grid(row=2, column=i, sticky='NWSE')
+
             self._week_days[i].columnconfigure(0, weight=0)
             self._week_days[i].columnconfigure(1, weight=1)
 
@@ -263,10 +264,13 @@ class Hourglass:
                 # References to indicate time of day (first day of week has time)
                 self._week_day_time_references[i].append(tk.LabelFrame(self._week_days[i], text='00:00', labelanchor='nw', borderwidth=0, highlightthickness=0))
                 self._week_day_time_references[i][-1].place(relx=0, rely=0, relwidth=1, relheight=0.05)
+
                 self._week_day_time_references[i].append(tk.LabelFrame(self._week_days[i], text='06:00', labelanchor='sw', borderwidth=0, highlightthickness=0))
                 self._week_day_time_references[i][-1].place(relx=0, rely=0.23, relwidth=1, relheight=0.05)
+
                 self._week_day_time_references[i].append(tk.LabelFrame(self._week_days[i], text='12:00', labelanchor='sw', borderwidth=0, highlightthickness=0))
                 self._week_day_time_references[i][-1].place(relx=0, rely=0.48, relwidth=1, relheight=0.05)
+
                 self._week_day_time_references[i].append(tk.LabelFrame(self._week_days[i], text='18:00', labelanchor='sw', borderwidth=0, highlightthickness=0))
                 self._week_day_time_references[i][-1].place(relx=0, rely=0.73, relwidth=1, relheight=0.05)
                 
@@ -280,10 +284,13 @@ class Hourglass:
             # References to indicate time of day
             self._week_day_time_references[i].append(tk.Frame(self._week_days[i], borderwidth=0, highlightthickness=0))
             self._week_day_time_references[i][-1].place(relx=0.01, rely=0, relwidth=1, relheight=0.001)
+
             self._week_day_time_references[i].append(tk.Frame(self._week_days[i], borderwidth=0, highlightthickness=0))
             self._week_day_time_references[i][-1].place(relx=0.01, rely=0.2459, relwidth=1, relheight=0.001)
+
             self._week_day_time_references[i].append(tk.Frame(self._week_days[i], borderwidth=0, highlightthickness=0))
             self._week_day_time_references[i][-1].place(relx=0.01, rely=0.4959, relwidth=1, relheight=0.001)
+
             self._week_day_time_references[i].append(tk.Frame(self._week_days[i], borderwidth=0, highlightthickness=0))
             self._week_day_time_references[i][-1].place(relx=0.01, rely=0.7459, relwidth=1, relheight=0.001)
         
@@ -295,24 +302,40 @@ class Hourglass:
         Sets up the GUI component for entering event information
         """
         self._new_event_calendar = calendar.Calendar(firstweekday=6)
+        
+        # Frame for all event entry widgets
+        self._event_entry_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._event_entry_frame.grid(row=2, column=0, rowspan=2, padx=(6, 6), pady=(3, 6), sticky='NWSE')
 
-        # Frame for event entry component
-        self._event_entry_frame = tk.Frame(self._root, borderwidth=0)
-        self._event_entry_frame.grid(row=2, column=0, padx=(6, 6), pady=(3, 3), sticky='NWSE')
-        self._event_entry_frame.columnconfigure(0, weight=11)
-        self._event_entry_frame.columnconfigure(1, weight=1)
-        self._event_entry_frame.columnconfigure(2, weight=0)
-        self._event_entry_frame.columnconfigure(3, weight=0)
-        self._event_entry_frame.columnconfigure(4, weight=0)
-        self._event_entry_frame.columnconfigure(5, weight=0)
-        self._event_entry_frame.columnconfigure(6, weight=0)
-        self._event_entry_frame.columnconfigure(7, weight=0)
-        self._event_entry_frame.columnconfigure(8, weight=0)
-        self._event_entry_frame.columnconfigure(9, weight=2)
+        self._event_entry_frame.rowconfigure(0, weight=0)
+        self._event_entry_frame.rowconfigure(1, weight=0)
+        self._event_entry_frame.columnconfigure(0, weight=1)
 
+        # Frame for primary event information
+        self._event_entry_primary_frame = tk.Frame(self._event_entry_frame, borderwidth=0, highlightthickness=0)
+        self._event_entry_primary_frame.grid(row=0, column=0, pady=(0, 3), sticky='NWSE')
+
+        self._event_entry_primary_frame.columnconfigure(0, weight=11)
+        self._event_entry_primary_frame.columnconfigure(1, weight=1)
+
+        for i in range(2, 9):
+            self._event_entry_primary_frame.columnconfigure(i, weight=0)
+
+        self._event_entry_primary_frame.columnconfigure(9, weight=2)
+
+        # Frame for secondary event information
+        self._event_entry_secondary_frame = tk.Frame(self._event_entry_frame, borderwidth=0, highlightthickness=0)
+        self._event_entry_secondary_frame.grid(row=1, column=0, pady=(3, 0), sticky='NWSE')
+        
+        self._event_entry_secondary_frame.columnconfigure(0, weight=0)
+        self._event_entry_secondary_frame.columnconfigure(1, weight=0)
+        self._event_entry_secondary_frame.columnconfigure(2, weight=0)
+        self._event_entry_secondary_frame.columnconfigure(3, weight=0)
+        self._event_entry_secondary_frame.columnconfigure(4, weight=0)
+        
         # For entering event description
-        self._event_entry_variable = tk.StringVar(self._event_entry_frame)
-        self._event_entry = tk.Entry(self._event_entry_frame, textvariable=self._event_entry_variable, borderwidth=0, highlightthickness=0)
+        self._event_entry_variable = tk.StringVar(self._event_entry_primary_frame)
+        self._event_entry = tk.Entry(self._event_entry_primary_frame, textvariable=self._event_entry_variable, borderwidth=0, highlightthickness=0)
         self._event_entry.insert(0, ' add new event...')
         self._event_entry.bind('<FocusIn>', self._event_entry_focus)
         self._event_entry.bind('<FocusOut>', self._event_entry_unfocus)
@@ -320,35 +343,35 @@ class Hourglass:
         self._event_entry.grid(row=0, column=0, padx=(0, 3), sticky='NWSE')
 
         # For selection color
-        self._color_selection_label = tk.Label(self._event_entry_frame, text='✏', borderwidth=0, highlightthickness=0)
+        self._color_selection_label = tk.Label(self._event_entry_primary_frame, text='✏', borderwidth=0, highlightthickness=0)
         self._color_selection_label.bind('<Button-1>', self._choose_color)
         self._color_selection_label.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
 
         # For selecting event date; possible days update based on currently selected month
         # For selecting event year
-        self._current_event_year = tk.StringVar(self._root)
+        self._current_event_year = tk.StringVar(self._event_entry_primary_frame)
         self._current_event_year.set(str(self._now.year))
         self._current_event_year.trace('w', self._update_time_date_menu)
         self._dropdown_years = [str(i) for i in range(self._now.year - self._NUMBER_YEARS, self._now.year + self._NUMBER_YEARS + 1)]
-        self._year_selection_menu = tk.OptionMenu(self._event_entry_frame, self._current_event_year, *self._dropdown_years)
+        self._year_selection_menu = tk.OptionMenu(self._event_entry_primary_frame, self._current_event_year, *self._dropdown_years)
         self._year_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
-        self._year_selection_menu.grid(row=0, column=2, padx=(2, 3), pady=(2, 0),  sticky='NWSE')
+        self._year_selection_menu.grid(row=0, column=2, padx=(2, 3), pady=(2, 0), sticky='NWSE')
 
         # For selecting event month
-        self._current_event_month = tk.StringVar(self._root)
+        self._current_event_month = tk.StringVar(self._event_entry_primary_frame)
         self._current_event_month.set(str(self._now.month).zfill(2))
         self._current_event_month.trace('w', self._update_time_date_menu)
         self._dropdown_months = [str(i).zfill(2) for i in range(1, self._NUMBER_MONTHS_IN_YEAR + 1)]
-        self._month_selection_menu = tk.OptionMenu(self._event_entry_frame, self._current_event_month, *self._dropdown_months)
+        self._month_selection_menu = tk.OptionMenu(self._event_entry_primary_frame, self._current_event_month, *self._dropdown_months)
         self._month_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
-        self._month_selection_menu.grid(row=0, column=3, padx=(3, 1), pady=(2, 0),  sticky='NWSE')
+        self._month_selection_menu.grid(row=0, column=3, padx=(3, 1), pady=(2, 0), sticky='NWSE')
         
         # For month/day formatting
-        self._date_separator_label = tk.Label(self._event_entry_frame, text='/', justify='center', borderwidth=0, highlightthickness=0)
+        self._date_separator_label = tk.Label(self._event_entry_primary_frame, text='/', justify='center', borderwidth=0, highlightthickness=0)
         self._date_separator_label.grid(row=0, column=4, sticky='NWSE')
 
         # For selecting event day
-        self._current_event_day = tk.StringVar(self._root)
+        self._current_event_day = tk.StringVar(self._event_entry_primary_frame)
         self._current_event_day.set(str(self._now.day).zfill(2))
 
         self._dropdown_days = []
@@ -356,37 +379,64 @@ class Hourglass:
             if day != 0:
                 self._dropdown_days.append(str(day).zfill(2))
         
-        self._day_selection_menu = tk.OptionMenu(self._event_entry_frame, self._current_event_day, *self._dropdown_days)
+        self._day_selection_menu = tk.OptionMenu(self._event_entry_primary_frame, self._current_event_day, *self._dropdown_days)
         self._day_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
-        self._day_selection_menu.grid(row=0, column=5, padx=(1, 3), pady=(2, 0),  sticky='NWSE')
+        self._day_selection_menu.grid(row=0, column=5, padx=(1, 3), pady=(2, 0), sticky='NWSE')
 
-        # For selecting event time
-        # For selecting event hour
-        self._current_event_hour = tk.StringVar(self._root)
+        # For selecting event start time
+        # For selecting event start hour
+        self._current_event_hour = tk.StringVar(self._event_entry_primary_frame)
         self._current_event_hour.set(str(self._now.hour).zfill(2))
         self._dropdown_hours = [str(i).zfill(2) for i in range(0, self._NUMBER_HOURS_IN_DAY)]
-        self._hour_selection_menu = tk.OptionMenu(self._event_entry_frame, self._current_event_hour, *self._dropdown_hours)
+        self._hour_selection_menu = tk.OptionMenu(self._event_entry_primary_frame, self._current_event_hour, *self._dropdown_hours)
         self._hour_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
-        self._hour_selection_menu.grid(row=0, column=6, padx=(3, 0), pady=(2, 0),  sticky='NWSE')
+        self._hour_selection_menu.grid(row=0, column=6, padx=(3, 0), pady=(2, 0), sticky='NWSE')
 
         # For hour:minute formatting
-        self._time_separator_label = tk.Label(self._event_entry_frame, text=':', justify='center', borderwidth=0, highlightthickness=0)
+        self._time_separator_label = tk.Label(self._event_entry_primary_frame, text=':', justify='center', borderwidth=0, highlightthickness=0)
         self._time_separator_label.grid(row=0, column=7, sticky='NWSE')
 
-        # For selecting event minute
-        self._current_event_minute = tk.StringVar(self._root)
+        # For selecting event start minute
+        self._current_event_minute = tk.StringVar(self._event_entry_primary_frame)
         self._current_event_minute.set(str(self._now.minute).zfill(2))
-        self._dropdown_minutes = [str(i).zfill(2) for i in range(0, self._NUMBER_MINUTES_IN_HOUR)]
-        self._minute_selection_menu = tk.OptionMenu(self._event_entry_frame, self._current_event_minute, *self._dropdown_minutes)
+        self._dropdown_minutes = [str(i).zfill(2) for i in range(self._NUMBER_MINUTES_IN_HOUR)]
+        self._minute_selection_menu = tk.OptionMenu(self._event_entry_primary_frame, self._current_event_minute, *self._dropdown_minutes)
         self._minute_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
         self._minute_selection_menu.grid(row=0, column=8, padx=(1, 0), pady=(2, 0), sticky='NWSE')
 
+        # For selecting event duration
+        # Duration label
+        self._event_duration_label = tk.Label(self._event_entry_secondary_frame, text='duration (optional):', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_label.grid(row=0, column=0, pady=(0, 2), sticky='NWSE')
+
+        # For selecting duration hour
+        self._current_event_duration_hour = tk.StringVar(self._event_entry_secondary_frame)
+        self._current_event_duration_hour.set('0'.zfill(2))
+        self._dropdown_duration_hour = [str(i).zfill(2) for i in range(self._NUMBER_HOURS_IN_DAY)]
+        self._duration_hour_menu = tk.OptionMenu(self._event_entry_secondary_frame, self._current_event_duration_hour, *self._dropdown_duration_hour)
+        self._duration_hour_menu.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
+
+        # Duration hour label
+        self._event_duration_hour_label = tk.Label(self._event_entry_secondary_frame, text='hour(s)', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_hour_label.grid(row=0, column=2, pady=(0, 2), sticky='NWSE')
+
+        # For selecting duration minute
+        self._current_event_duration_minute = tk.StringVar(self._event_entry_secondary_frame)
+        self._current_event_duration_minute.set('0'.zfill(2))
+        self._dropdown_duration_minute = [str(i).zfill(2) for i in range(self._NUMBER_MINUTES_IN_HOUR)]
+        self._duration_minute_menu = tk.OptionMenu(self._event_entry_secondary_frame, self._current_event_duration_minute, *self._dropdown_duration_minute)
+        self._duration_minute_menu.grid(row=0, column=3, padx=(3, 3), sticky='NWSE')
+
+        # Duration minute label
+        self._event_duration_minute_label = tk.Label(self._event_entry_secondary_frame, text='minutes(s)', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_minute_label.grid(row=0, column=4, pady=(0, 2), sticky='NWSE')
+
         # Bug: entry widgets do not immediately display correctly without text widget on screen
         # Temporary bug fix
-        self._placeholder_frame_widget = tk.Label(self._event_entry_frame, borderwidth=0, highlightthickness=0)
+        self._placeholder_frame_widget = tk.Label(self._event_entry_primary_frame, borderwidth=0, highlightthickness=0)
         self._placeholder_frame_widget.grid(row=0, column=9)
 
-        self._placeholder_text_widget = tk.Text(self._event_entry_frame, height=1, width=1, takefocus=0, borderwidth=0, highlightthickness=0)
+        self._placeholder_text_widget = tk.Text(self._event_entry_primary_frame, height=1, width=1, takefocus=0, borderwidth=0, highlightthickness=0)
         self._placeholder_text_widget.config({'state': 'disabled'})
         self._placeholder_text_widget.grid(row=0, column=9, in_=self._placeholder_frame_widget)
         self._placeholder_text_widget.lower()
@@ -396,7 +446,7 @@ class Hourglass:
         Sets up the monthly calendar component of the GUI
         """
         # Frame for the calendar
-        self._calendar_frame = tk.Frame(self._root, borderwidth=0)
+        self._calendar_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
         self._calendar_frame.grid(row=0, column=1, padx=(3, 6), pady=(6, 3), sticky='NWSE')
         
         self._calendar_frame.rowconfigure(0, weight=1)
@@ -418,23 +468,23 @@ class Hourglass:
         # Button to go to previous month
         self._previous_month_label = tk.Label(self._month_buttons_frame, text='← prev. ', justify='left', borderwidth=0, highlightthickness=0)
         self._previous_month_label.bind('<Button-1>', self._previous_month)
-        self._previous_month_label.bind('<ButtonRelease>', self._previous_month_release_button)
+        self._previous_month_label.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
         self._previous_month_label.grid(row=0, column=0, sticky='NWSE')
 
         # Button to go to current month
         self._current_month_label = tk.Label(self._month_buttons_frame, text=' current ', justify='center', borderwidth=0, highlightthickness=0)
         self._current_month_label.bind('<Button-1>', self._current_month)
-        self._current_month_label.bind('<ButtonRelease>', self._current_month_release_button)
+        self._current_month_label.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
         self._current_month_label.grid(row=0, column=1, sticky='NS')
 
         # Button to go to next month
         self._next_month_label = tk.Label(self._month_buttons_frame, text=' next →', justify='right', borderwidth=0, highlightthickness=0)
         self._next_month_label.bind('<Button-1>', self._next_month)
-        self._next_month_label.bind('<ButtonRelease>', self._next_month_release_button)
+        self._next_month_label.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
         self._next_month_label.grid(row=0, column=2, sticky='NWSE')
 
         # Label for month and year
-        self._month_label = tk.Label(self._calendar_frame, justify='center', borderwidth=0)
+        self._month_label = tk.Label(self._calendar_frame, justify='center', borderwidth=0, highlightthickness=0)
         self._month_label.grid(row=1, column=0, columnspan=7, sticky='NWSE')
 
         # Labels for days of the week
@@ -460,7 +510,7 @@ class Hourglass:
         Sets up the to-do list component of the GUI
         """
         # Frame for to-do list
-        self._to_do_frame = tk.Frame(self._root, borderwidth=0)
+        self._to_do_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
         self._to_do_frame.grid(row=1, column=1, padx=(3, 6), pady=(3, 3), ipadx=6, ipady=6, sticky='NWSE')
         self._to_do_frame.grid_propagate(False)
 
@@ -473,7 +523,7 @@ class Hourglass:
         self._to_do_label.grid(row=0, column=0, padx=(3, 0), pady=(3, 4), sticky='NWSE')
 
         # Frame for tasks in to-do list
-        self._to_do_list_frame = tk.Frame(self._to_do_frame, borderwidth=0)
+        self._to_do_list_frame = tk.Frame(self._to_do_frame, borderwidth=0, highlightthickness=0)
         self._to_do_list_frame.grid(row=1, column=0, sticky='NWSE')
 
         # For entering tasks
@@ -492,23 +542,25 @@ class Hourglass:
         """
         Sets up the settings component of the GUI
         """
-        # Frame
-        self._settings_frame = tk.Frame(self._root, borderwidth=0)
-        self._settings_frame.grid(row=3, column=0, padx=(6, 6), pady=(3, 6), sticky='NWSE')
-        self._settings_frame.columnconfigure(0, weight=1)
+        # Frame for all settings widgets
+        self._settings_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._settings_frame.grid(row=3, column=1, padx=(6, 6), pady=(3, 7), sticky='NWSE')
+        
+        self._settings_frame.rowconfigure(0, weight=1)
+        self._settings_frame.columnconfigure(0, weight=3)
         self._settings_frame.columnconfigure(1, weight=1)
         self._settings_frame.columnconfigure(2, weight=1)
-        self._settings_frame.columnconfigure(3, weight=27)
-
-        # For how-to/help
-        self._how_to_label = tk.Label(self._settings_frame, text='?', borderwidth=0)
-        self._how_to_label.bind('<Button-1>', self._show_how_to)
-        self._how_to_label.grid(row=0, column=0, padx=(0, 3), sticky='NWSE')
+        self._settings_frame.columnconfigure(3, weight=1)
 
         # For switching between light/dark mode
-        self._theme_mode_label = tk.Label(self._settings_frame, borderwidth=0)
+        self._theme_mode_label = tk.Label(self._settings_frame, borderwidth=0, highlightthickness=0)
         self._theme_mode_label.bind('<Button-1>', self._set_theme_mode)
-        self._theme_mode_label.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
+        self._theme_mode_label.grid(row=0, column=2, padx=(3, 3), sticky='NWSE')
+
+        # For how-to/help
+        self._how_to_label = tk.Label(self._settings_frame, text='?', borderwidth=0, highlightthickness=0)
+        self._how_to_label.bind('<Button-1>', self._show_how_to)
+        self._how_to_label.grid(row=0, column=3, padx=(3, 0), sticky='NWSE')
 
     def _schedule_read(self):
         """
@@ -525,7 +577,7 @@ class Hourglass:
         for line in lines:
             key = (line[:4], line[4:6], line[6:8])
             event_id = str(uuid.uuid4())
-            event_info = {'hour': line[8:10], 'minute': line[10:12], 'hex_color': line[12:19], 'description': line[19:].rstrip(), 'ten_minute_notified': False, 'one_minute_notified': False}
+            event_info = {'hour': line[8:10], 'minute': line[10:12], 'duration_hour': line[12:14], 'duration_minute': line[14:16], 'hex_color': line[16:23], 'description': line[23:].rstrip(), 'ten_minute_notified': False, 'one_minute_notified': False}
             
             self._schedule.setdefault(key, {}).update({event_id: event_info})
         
@@ -543,25 +595,27 @@ class Hourglass:
         # Write events into file
         for key in self._schedule:
             for event_id, event_info in self._schedule[key].items():
-                line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('hex_color') + event_info.get('description').rstrip() + '\n'
+                line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('duration_hour') + event_info.get('duration_minute') + event_info.get('hex_color') + event_info.get('description').rstrip() + '\n'
                 self._schedule_file.write(line)
         
         # Close schedule file
         self._schedule_file.close()
     
-    def _schedule_add(self, key, hour, minute, hex_color, description):
+    def _schedule_add(self, key, hour, minute, duration_hour, duration_minute, hex_color, description):
         """
         Adds an event to the schedule
 
         key: Tuple of strings, (yyyy, mm, dd)
-        hour: Hour, hh, string
-        minute: Minute, mm, string
+        hour: Event start time hour, hh, string
+        minute: Event start minute, mm, string
+        duration_hour: Event duration hour, hh, string
+        duration_minute: Event duration minute, mm, string
         hex_color: Hex color, string
         description: Event description, string
         """
         # Add event
         event_id = str(uuid.uuid4())
-        event_info = {'hour': hour, 'minute': minute, 'hex_color': hex_color, 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
+        event_info = {'hour': hour, 'minute': minute, 'duration_hour': duration_hour, 'duration_minute': duration_minute, 'hex_color': hex_color, 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
 
         self._schedule.setdefault(key, {}).update({event_id: event_info})
 
@@ -573,7 +627,7 @@ class Hourglass:
         Removes an event from the schedule
 
         key: Tuple of strings, (yyyy, mm, dd)
-        event_id: unique identifier of the event, UUID
+        event_id: unique identifier of the event, UUID, string
         """
         try:
             # Retrieve event info
@@ -595,51 +649,38 @@ class Hourglass:
         """
         Updates displayed week to reflect the current week
         """
-        self._current_week_label.config({'background': self._clicked_widget_color})
+        self._widget_pressed(self._current_week_label)
 
         self._now = datetime.datetime.now()
         self._displayed_sunday = self._now - datetime.timedelta(days=(self._now.isoweekday() % self._NUMBER_DAYS_IN_WEEK))
+
         self._update_week()
-    
-    def _current_week_release_button(self, *args):
-        """
-        Restores current week button to unpressed appearance
-        """
-        self._current_week_label.config({'background': self._widget_color})
 
     def _previous_week(self, *args):
         """
         Updates displayed week to reflect the previous week
         """
-        self._previous_week_label.config({'background': self._clicked_widget_color})
+        self._widget_pressed(self._previous_week_label)
         self._change_week(num=-1)
-    
-    def _previous_week_release_button(self, *args):
-        """
-        Restores previous week button to unpressed appearance
-        """
-        self._previous_week_label.config({'background': self._widget_color})
 
     def _next_week(self, *args):
         """
         Updates displayed week to reflect the next week
         """
-        self._next_week_label.config({'background': self._clicked_widget_color})
+        self._widget_pressed(self._next_week_label)
         self._change_week(num=1)
-
-    def _next_week_release_button(self, *args):
-        """
-        Restores next week button to unpressed appearance
-        """
-        self._next_week_label.config({'background': self._widget_color})
     
-    def _change_week(self, num=None, day=None):
+    def _change_week(self, num=None, day=None, widget=None):
         """
-        Updates displayed week; accepts either but not both keyword arguments
+        Updates displayed week; accepts either, but not both, of the keyword arguments num and day
 
         num: Number of weeks to change by (negative for previous, positive for next), int
         day: A day in the week to change to, datetime
+        widget: The widget that called this function, if called from the calendar, tkinter widget
         """
+        if widget is not None:
+            self._widget_pressed(widget)
+        
         if num is not None:
             self._displayed_sunday = self._displayed_sunday + num * datetime.timedelta(days=self._NUMBER_DAYS_IN_WEEK)
         elif day is not None:
@@ -679,13 +720,22 @@ class Hourglass:
                 # Display each event
                 if events is not None:
                     for event_id, event_info in events.items():
-                        self._week_events_labels[i].append(tk.Label(self._week_days[i], text=event_info.get('hour') + ':' + event_info.get('minute') + ' ' + event_info.get('description').rstrip(), justify='left'))
+                        self._week_events_labels[i].append(tk.Label(self._week_days[i], text=event_info.get('hour') + ':' + event_info.get('minute') + ' ' + event_info.get('description').rstrip(), anchor='nw', justify='left'))
                         self._week_events_labels[i][-1].config({'foreground': self._light_or_dark_mode_text(tuple(int(event_info.get('hex_color')[1:][j:j + 2], 16) for j in (0, 2, 4)))})
                         self._week_events_labels[i][-1].config({'background': event_info.get('hex_color')})
                         self._week_events_labels[i][-1].config({'wraplength': self._EVENT_LABEL_WRAPLENGTH})
                         self._week_events_labels[i][-1].bind('<Button-1>', lambda event: event.widget.lift())
                         self._week_events_labels[i][-1].bind('<Button-2>', lambda event, key=key, event_id=event_id: self._schedule_remove(key, event_id))
-                        self._week_events_labels[i][-1].place(relx=0.05, rely=self._fraction_of_day(int(event_info.get('hour')), int(event_info.get('minute'))))
+
+                        # Event display size based on duration
+                        y = self._fraction_of_day(int(event_info.get('hour')), int(event_info.get('minute')))
+
+                        if event_info.get('duration_hour') == '0'.zfill(2) and event_info.get('duration_minute') == '0'.zfill(2):
+                            self._week_events_labels[i][-1].place(relx=0.05, rely=y)
+                        else:
+                            h = self._fraction_of_day(int(event_info.get('duration_hour')), int(event_info.get('duration_minute')))
+                            self._week_events_labels[i][-1].place(relx=0.05, rely=y, relheight=h)
+
         except:
             self._show_error('unable to load or update events.')
     
@@ -693,25 +743,19 @@ class Hourglass:
         """
         Updates displayed month to reflect the current month
         """
-        self._current_month_label.config({'background': self._clicked_widget_color})
+        self._widget_pressed(self._current_month_label)
 
         self._now = datetime.datetime.now()
         self._displayed_month = self._now.month
         self._displayed_year = self._now.year
 
         self._update_month()
-    
-    def _current_month_release_button(self, *args):
-        """
-        Restores current month button to unpressed appearance
-        """
-        self._current_month_label.config({'background': self._widget_color})
 
     def _previous_month(self, *args):
         """
         Updates displayed month to reflect the previous month
         """
-        self._previous_month_label.config({'background': self._clicked_widget_color})
+        self._widget_pressed(self._previous_month_label)
 
         if self._displayed_month == 1:
             self._displayed_month = self._NUMBER_MONTHS_IN_YEAR
@@ -720,18 +764,12 @@ class Hourglass:
             self._displayed_month = self._displayed_month - 1
         
         self._update_month()
-    
-    def _previous_month_release_button(self, *args):
-        """
-        Restores previous month button to unpressed appearance
-        """
-        self._previous_month_label.config({'background': self._widget_color})
 
     def _next_month(self, *args):
         """
         Updates displayed month to reflect the next month
         """
-        self._next_month_label.config({'background': self._clicked_widget_color})
+        self._widget_pressed(self._next_month_label)
 
         if self._displayed_month == self._NUMBER_MONTHS_IN_YEAR:
             self._displayed_month = 1
@@ -740,12 +778,6 @@ class Hourglass:
             self._displayed_month = self._displayed_month + 1
         
         self._update_month()
-
-    def _next_month_release_button(self, *args):
-        """
-        Restores next month button to unpressed appearance
-        """
-        self._next_month_label.config({'background': self._widget_color})
 
     def _update_month(self):
         """
@@ -777,8 +809,10 @@ class Hourglass:
                 self._calendar_month_days_labels[i][j].config({'text': calendar_list[i * self._NUMBER_DAYS_IN_WEEK + j + 2 + self._NUMBER_DAYS_IN_WEEK]})
 
                 try:
+                    widget = self._calendar_month_days_labels[i][j]
                     day = datetime.datetime(self._displayed_year, self._displayed_month, int(self._calendar_month_days_labels[i][j].cget('text')))
-                    self._calendar_month_days_labels[i][j].bind('<Button-1>', lambda event, day=day: self._change_week(day=day))
+                    self._calendar_month_days_labels[i][j].bind('<Button-1>', lambda event, day=day, widget=widget: self._change_week(day=day, widget=widget))
+                    self._calendar_month_days_labels[i][j].bind('<ButtonRelease>', lambda event, widget=widget: self._widget_released(widget=widget))
                 except:
                     pass
     
@@ -807,7 +841,7 @@ class Hourglass:
         When enter is pressed and focus is on the event entry widget, remove focus and add event
         """
         if self._event_entry.get() != ' add new event...':
-            self._schedule_add(self._get_event_date(), self._get_event_hour(), self._get_event_minute(), self._current_event_hex, self._event_entry.get().lstrip())
+            self._schedule_add(self._get_event_date(), self._get_event_hour(), self._get_event_minute(), self._get_event_duration_hour(), self._get_event_duration_minute(), self._current_event_hex, self._event_entry.get().lstrip())
             self._event_entry.delete(0, tk.END)
 
         self._event_entry_unfocus()
@@ -1014,7 +1048,7 @@ class Hourglass:
             self._menu_text_color = '#ebebeb'
             self._background_color = '#2c2c2c'
             self._widget_color = '#383838'
-            self._clicked_widget_color = '#2e2e2e'
+            self._pressed_widget_color = '#2e2e2e'
             self._faint_text_color = '#494949'
             self._faint_display_color = '#424242'
         else:
@@ -1025,7 +1059,7 @@ class Hourglass:
             self._menu_text_color = '#505050'
             self._background_color = '#d3d3d3'
             self._widget_color = '#b3b3b3'
-            self._clicked_widget_color = '#969696'
+            self._pressed_widget_color = '#969696'
             self._faint_text_color = '#a5a5a5'
             self._faint_display_color = '#a1a1a1'
     
@@ -1050,8 +1084,11 @@ class Hourglass:
                 child.config({'background': self._background_color})
 
             elif type(child) is tk.Label and parent not in self._week_days:
-                if child is self._time_separator_label or child is self._date_separator_label:
+                if child in [self._time_separator_label, self._date_separator_label]:
                     child.config({'foreground': self._label_text_color})
+                    child.config({'background': self._background_color})
+                elif child in [self._event_duration_label, self._event_duration_hour_label, self._event_duration_minute_label]:
+                    child.config({'foreground': self._prompt_text_color})
                     child.config({'background': self._background_color})
                 else:
                     child.config({'foreground': self._label_text_color})
@@ -1083,6 +1120,22 @@ class Hourglass:
                     child.config({'background': self._faint_display_color})
                 else:
                     child.config({'background': self._background_color})
+    
+    def _widget_pressed(self, widget):
+        """
+        Sets widget to pressed appearance
+
+        widget: The pressed widget, tkinter widget
+        """
+        widget.config({'background': self._pressed_widget_color})
+
+    def _widget_released(self, widget):
+        """
+        Restores given widget to unpressed appearance
+        
+        widget: The pressed widget, tkinter widget
+        """
+        widget.config({'background': self._widget_color})
     
     def _clear_day(self, parent):
         """
@@ -1137,19 +1190,35 @@ class Hourglass:
 
     def _get_event_hour(self):
         """
-        Returns the current event hour entered
+        Returns the current event start hour entered
 
-        return: Event hour, hh, string
+        return: Event start hour, hh, string
         """
         return self._current_event_hour.get()
 
     def _get_event_minute(self):
         """
-        Returns the current event minute entered
+        Returns the current event start minute entered
 
-        return: Event minute, mm, string
+        return: Event start minute, mm, string
         """
         return self._current_event_minute.get()
+    
+    def _get_event_duration_hour(self):
+        """
+        Returns the current event duration hour entered
+
+        return: Event duration hour, hh, string
+        """
+        return self._current_event_duration_hour.get()
+    
+    def _get_event_duration_minute(self):
+        """
+        Returns the current event duration minute entered
+
+        return: Event duration minute, mm, string
+        """
+        return self._current_event_duration_minute.get()
     
     def _show_how_to(self, *args):
         """
