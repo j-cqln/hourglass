@@ -80,32 +80,16 @@ class Hourglass:
         self._root.rowconfigure(0, weight=1)
         self._root.rowconfigure(1, weight=5)
 
-        # Location to find schedule and tasks files
+        # Location and name of schedule and tasks files
         self._file_location = os.path.dirname('__file__')
-        self._schedule_file_location = os.path.join(self._file_location, 'schedule.txt')
-        self._to_do_list_file_location = os.path.join(self._file_location, 'tasks.txt')
+        self._schedule_file_name = 'schedule.txt'
+        self._to_do_list_file_name = 'tasks.txt'
+        self._schedule_old_file_name = 'schedule_old.txt'
+        self._to_do_list_old_file_name = 'tasks_old.txt'
 
-        # If the files do not exist, create them then open and read; if they do exist, simply open and read
-        try:
-            if not os.path.exists(self._schedule_file_location):
-                with open(os.path.join(self._file_location, 'schedule.txt'), 'x') as opened_file:
-                    self._schedule_file = opened_file
-            
-            with open(os.path.join(self._file_location, 'schedule.txt'), 'r') as opened_file:
-                self._schedule_file = opened_file
-                self._schedule_read()
-            
-            if not os.path.exists(self._to_do_list_file_location):
-                with open(os.path.join(self._file_location, 'tasks.txt'), 'x') as opened_file:
-                    self._to_do_list_file = opened_file
-            
-            with open(os.path.join(self._file_location, 'tasks.txt'), 'r') as opened_file:
-                self._to_do_list_file = opened_file
-                self._to_do_read()
-        except:
-            # Display an error message then exit the application
-            self._show_error('unable to read from schedule or to-do list files.')
-            sys.exit(1)
+        # Read from schedule and to-do list files
+        self._schedule_read(self._schedule_file_name)
+        self._to_do_read(self._to_do_list_file_name)
         
         # Set up GUI title and GUI widgets
         self._set_title()
@@ -127,23 +111,10 @@ class Hourglass:
         # Application loop
         self._root.mainloop()
 
-        # If the files do not exist, create them then open and write; if they do exist, simply open and write
+        # Write to schedule and to-do list files
         try:
-            if not os.path.exists(self._schedule_file_location):
-                with open(self._schedule_file_location, 'x') as opened_file:
-                    self._schedule_file = opened_file
-            
-            with open(self._schedule_file_location, 'w') as opened_file:
-                self._schedule_file = opened_file
-                self._schedule_write()
-            
-            if not os.path.exists(self._to_do_list_file_location):
-                with open(self._to_do_list_file_location, 'x') as opened_file:
-                    self._to_do_list_file = opened_file
-            
-            with open(self._to_do_list_file_location, 'w') as opened_file:
-                self._to_do_list_file = opened_file
-                self._to_do_write()
+            self._schedule_write(self._schedule_file_name)
+            self._to_do_write(self._to_do_list_file_name)
         except:
             # Display an error message then exit the application
             self._show_error('unable to write to schedule or to-do list files.')
@@ -552,6 +523,11 @@ class Hourglass:
         self._settings_frame.columnconfigure(2, weight=1)
         self._settings_frame.columnconfigure(3, weight=1)
 
+        # For saving
+        self._save_label = tk.Label(self._settings_frame, text='save', borderwidth=0, highlightthickness=0)
+        self._save_label.bind('<Button-1>', lambda event: (self._schedule_write(self._schedule_old_file_name), self._to_do_write(self._to_do_list_old_file_name)))
+        self._save_label.grid(row=0, column=1, padx=(0, 3), sticky='NWSE')
+
         # For switching between light/dark mode
         self._theme_mode_label = tk.Label(self._settings_frame, borderwidth=0, highlightthickness=0)
         self._theme_mode_label.bind('<Button-1>', self._set_theme_mode)
@@ -562,44 +538,80 @@ class Hourglass:
         self._how_to_label.bind('<Button-1>', self._show_how_to)
         self._how_to_label.grid(row=0, column=3, padx=(3, 0), sticky='NWSE')
 
-    def _schedule_read(self):
+    def _schedule_read(self, file_name):
         """
         Reads from schedule file
+
+        file_name: Name of the file to read from, string
         """
-        # Schedule dictionary
-        # {(year, month, day): {{event_id: {event_info}},
-        #                       {event_id: {event_info}}, ... }}
-        self._schedule = {}
+        try:
+            # If the schedule file does not exist, create it
+            self._schedule_file_location = os.path.join(self._file_location, file_name)
 
-        # Read events from file
-        lines = self._schedule_file.readlines()
-
-        for line in lines:
-            key = (line[:4], line[4:6], line[6:8])
-            event_id = str(uuid.uuid4())
-            event_info = {'hour': line[8:10], 'minute': line[10:12], 'duration_hour': line[12:14], 'duration_minute': line[14:16], 'hex_color': line[16:23], 'description': line[23:].rstrip(), 'ten_minute_notified': False, 'one_minute_notified': False}
+            if not os.path.exists(self._schedule_file_location):
+                with open(self._schedule_file_location, 'x') as opened_file:
+                    self._schedule_file = opened_file
             
-            self._schedule.setdefault(key, {}).update({event_id: event_info})
-        
-        # Close schedule file
-        self._schedule_file.close()
-    
-    def _schedule_write(self):
-        """
-        Writes into schedule file
-        """
-        # Clear schedule file
-        self._schedule_file.seek(0)
-        self._schedule_file.truncate()
+            # Open and read
+            with open(self._schedule_file_location, 'r') as opened_file:
+                self._schedule_file = opened_file
+                
+                # Schedule dictionary
+                # {(year, month, day): {{event_id: {event_info}},
+                #                       {event_id: {event_info}}, ... }}
+                self._schedule = {}
 
-        # Write events into file
-        for key in self._schedule:
-            for event_id, event_info in self._schedule[key].items():
-                line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('duration_hour') + event_info.get('duration_minute') + event_info.get('hex_color') + event_info.get('description').rstrip() + '\n'
-                self._schedule_file.write(line)
-        
-        # Close schedule file
-        self._schedule_file.close()
+                # Read events from file
+                lines = self._schedule_file.readlines()
+
+                for line in lines:
+                    key = (line[:4], line[4:6], line[6:8])
+                    event_id = str(uuid.uuid4())
+                    event_info = {'hour': line[8:10], 'minute': line[10:12], 'duration_hour': line[12:14], 'duration_minute': line[14:16], 'hex_color': line[16:23], 'description': line[23:].rstrip(), 'ten_minute_notified': False, 'one_minute_notified': False}
+                    
+                    self._schedule.setdefault(key, {}).update({event_id: event_info})
+                
+                # Close schedule file
+                self._schedule_file.close()
+        except:
+            # Display an error message then exit the application
+            self._show_error('unable to read from schedule file.')
+            sys.exit(1)
+    
+    def _schedule_write(self, file_name):
+        """
+        Writes to schedule file
+
+        file_name: Name of the file to write to, string
+        """
+        try:
+            # If the schedule file does not exist, create it
+            self._schedule_file_location = os.path.join(self._file_location, file_name)
+
+            if not os.path.exists(self._schedule_file_location):
+                with open(self._schedule_file_location, 'x') as opened_file:
+                    self._schedule_file = opened_file
+            
+            # Open and write
+            with open(self._schedule_file_location, 'w') as opened_file:
+                self._schedule_file = opened_file
+
+                # Clear schedule file
+                self._schedule_file.seek(0)
+                self._schedule_file.truncate()
+
+                # Write events into file
+                for key in self._schedule:
+                    for event_id, event_info in self._schedule[key].items():
+                        line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('duration_hour') + event_info.get('duration_minute') + event_info.get('hex_color') + event_info.get('description').rstrip() + '\n'
+                        self._schedule_file.write(line)
+                
+                # Close schedule file
+                self._schedule_file.close()
+        except:
+            # Display an error message then exit the application
+            self._show_error('unable to write to schedule file.')
+            sys.exit(1)
     
     def _schedule_add(self, key, hour, minute, duration_hour, duration_minute, hex_color, description):
         """
@@ -873,36 +885,72 @@ class Hourglass:
         for day in self._dropdown_days:
             self._day_selection_menu['menu'].add_command(label=day, command=lambda day=day: self._current_event_day.set(day))
     
-    def _to_do_read(self):
+    def _to_do_read(self, file_name):
         """
         Reads from to-do list file
+
+        file_name: Name of the file to read from, string
         """
-        # To-do list
-        self._to_do_list = []
+        try:
+            # If the to-do list file does not exist, create it
+            self._to_do_list_file_location = os.path.join(self._file_location, file_name)
 
-        # Read from to-do list file
-        lines = self._to_do_list_file.readlines()
+            if not os.path.exists(self._to_do_list_file_location):
+                with open(self._to_do_list_file_location, 'x') as opened_file:
+                    self._to_do_list_file = opened_file
+            
+            # Open and read
+            with open(self._to_do_list_file_location, 'r') as opened_file:
+                self._to_do_list_file = opened_file
 
-        for line in lines:
-            self._to_do_list.append(line.rstrip())
-        
-        # Close to-do list file
-        self._to_do_list_file.close()
+                # To-do list
+                self._to_do_list = []
 
-    def _to_do_write(self):
+                # Read from to-do list file
+                lines = self._to_do_list_file.readlines()
+
+                for line in lines:
+                    self._to_do_list.append(line.rstrip())
+                
+                # Close to-do list file
+                self._to_do_list_file.close()
+        except:
+            # Display an error message then exit the application
+            self._show_error('unable to read from to-do list file.')
+            sys.exit(1)
+
+    def _to_do_write(self, file_name):
         """
         Writes to to-do list file
-        """
-        # Clear to-do list file
-        self._to_do_list_file.seek(0)
-        self._to_do_list_file.truncate()
 
-        # Write into to-do list file
-        for item in self._to_do_list:
-            self._to_do_list_file.write(item.rstrip() + '\n')
-        
-        # Close to-do list file
-        self._to_do_list_file.close()
+        file_name: Name of the file to write to, string
+        """
+        try:
+            # If the to-do list file does not exist, create it
+            self._to_do_list_file_location = os.path.join(self._file_location, file_name)
+
+            if not os.path.exists(self._to_do_list_file_location):
+                with open(self._to_do_list_file_location, 'x') as opened_file:
+                    self._to_do_list_file = opened_file
+            
+            # Open and write
+            with open(self._to_do_list_file_location, 'w') as opened_file:
+                self._to_do_list_file = opened_file
+            
+                # Clear to-do list file
+                self._to_do_list_file.seek(0)
+                self._to_do_list_file.truncate()
+
+                # Write to to-do list file
+                for item in self._to_do_list:
+                    self._to_do_list_file.write(item.rstrip() + '\n')
+                
+                # Close to-do list file
+                self._to_do_list_file.close()
+        except:
+            # Display an error message then exit the application
+            self._show_error('unable to write to to-do list file.')
+            sys.exit(1)
 
     def _to_do_list_toggle(self, item):
         """
