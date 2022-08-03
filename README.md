@@ -12,3 +12,4 @@ What can you do using Hourglass?
 - Set event duration
 - Receive notifications for upcoming events
 - Supports light and dark mode
+- ... and more!
