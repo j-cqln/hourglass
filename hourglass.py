@@ -525,7 +525,8 @@ class Hourglass:
 
         # For saving
         self._save_label = tk.Label(self._settings_frame, text='save', borderwidth=0, highlightthickness=0)
-        self._save_label.bind('<Button-1>', lambda event: (self._schedule_write(self._schedule_old_file_name), self._to_do_write(self._to_do_list_old_file_name)))
+        self._save_label.bind('<Button-1>', lambda event: self._save())
+        self._save_label.bind('<ButtonRelease>', lambda event: self._widget_released(self._save_label))
         self._save_label.grid(row=0, column=1, padx=(0, 3), sticky='NWSE')
 
         # For switching between light/dark mode
@@ -1053,6 +1054,16 @@ class Hourglass:
                 self._to_do_list_display[-1].grid(row=i, column=0, padx=(2, 2), sticky='NWSE')
         except:
             self._show_error('unable to load or update to-do list.')
+    
+    def _save(self, *args):
+        """
+        Saves current schedule and to-do list
+        """
+        self._widget_pressed(self._save_label)
+
+        # Save schedule and to-do list
+        self._schedule_write(self._schedule_old_file_name)
+        self._to_do_write(self._to_do_list_old_file_name)
     
     def _choose_color(self, *args):
         """
