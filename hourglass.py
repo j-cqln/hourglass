@@ -672,7 +672,7 @@ class Hourglass:
         if delta is not None:
             # Leap years mode
             if leap_years == self._CHECKBUTTON_ON and frequency == 'yearly':
-                for i in range(1, int(amount) + 1):
+                for i in range(1, int(amount)):
                     try:
                         # Recurrence date
                         date = datetime.datetime(int(key[0]) + i, int(key[1]), int(key[2]))
@@ -686,7 +686,7 @@ class Hourglass:
                     except:
                         pass
             else:
-                for i in range(1, int(amount) + 1):
+                for i in range(1, int(amount)):
                     # Recurrence date
                     date = datetime.datetime(int(key[0]), int(key[1]), int(key[2])) + datetime.timedelta(days=i * delta)
                     new_key = (str(date.year), str(date.month).zfill(2), str(date.day).zfill(2))
