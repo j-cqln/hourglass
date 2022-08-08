@@ -25,7 +25,10 @@ class Hourglass:
         self._NUMBER_HOURS_IN_DAY = 24
         self._NUMBER_DAYS_IN_WEEK = 7
         self._NUMBER_MONTHS_IN_YEAR = 12
-        self._NUMBER_YEARS = 5
+        self._NUMBER_YEARS = 10
+
+        # Number of recurrences for recurring events (in addition to some special values, the user can schedule 1 to n recurrences, where n is this constant)
+        self._NUMBER_EVENT_RECURRENCE = 10
 
         # Number of weeks (including those with fewer days than the days in week constant above) in a month to display
         self._NUMBER_DISPLAY_WEEKS_IN_MONTH = 6
@@ -33,9 +36,9 @@ class Hourglass:
         # Maximum width of each event on the schedule in screen units
         self._EVENT_LABEL_WRAPLENGTH = 100
 
-        # Constants for on/off values of to-do list task check boxes
-        self._TO_DO_LIST_TASK_ON = 1
-        self._TO_DO_LIST_TASK_OFF = 0
+        # Constants for on/off values of check boxes
+        self._CHECKBUTTON_ON = 1
+        self._CHECKBUTTON_OFF = 0
 
         # Current moment
         self._now = datetime.datetime.now()
@@ -298,11 +301,8 @@ class Hourglass:
         self._event_entry_secondary_frame = tk.Frame(self._event_entry_frame, borderwidth=0, highlightthickness=0)
         self._event_entry_secondary_frame.grid(row=1, column=0, pady=(3, 0), sticky='NWSE')
         
-        self._event_entry_secondary_frame.columnconfigure(0, weight=0)
-        self._event_entry_secondary_frame.columnconfigure(1, weight=0)
-        self._event_entry_secondary_frame.columnconfigure(2, weight=0)
-        self._event_entry_secondary_frame.columnconfigure(3, weight=0)
-        self._event_entry_secondary_frame.columnconfigure(4, weight=0)
+        for i in range(10):
+            self._event_entry_secondary_frame.columnconfigure(i, weight=0)
         
         # For entering event description
         self._event_entry_variable = tk.StringVar(self._event_entry_primary_frame)
@@ -399,9 +399,39 @@ class Hourglass:
         self._duration_minute_menu.grid(row=0, column=3, padx=(3, 3), sticky='NWSE')
 
         # Duration minute label
-        self._event_duration_minute_label = tk.Label(self._event_entry_secondary_frame, text='minutes(s)', justify='center', borderwidth=0, highlightthickness=0)
-        self._event_duration_minute_label.grid(row=0, column=4, pady=(0, 2), sticky='NWSE')
+        self._event_duration_minute_label = tk.Label(self._event_entry_secondary_frame, text='minute(s)', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_minute_label.grid(row=0, column=4, padx=(0, 3), pady=(0, 2), sticky='NWSE')
 
+        # For selecting event recurrence
+        # Recurrence label
+        self._event_recurrence_label = tk.Label(self._event_entry_secondary_frame, text='recurring', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_recurrence_label.grid(row=0, column=5, padx=(5, 0), pady=(0, 2), sticky='NWSE')
+
+        # For selecting event recurrence frequency
+        self._current_event_recurrence_frequency = tk.StringVar(self._event_entry_secondary_frame)
+        self._current_event_recurrence_frequency.set('none')
+        self._dropdown_event_recurrence_frequency = ['none', 'daily', 'weekly', 'monthly', 'yearly']
+        self._event_recurrence_frequency_dictionary = {'none': None, 'daily': 1, 'weekly': 7, 'monthly': 30, 'yearly': 365}
+        self._event_recurrence_frequency_menu = tk.OptionMenu(self._event_entry_secondary_frame, self._current_event_recurrence_frequency, *self._dropdown_event_recurrence_frequency)
+        self._event_recurrence_frequency_menu.grid(row=0, column=6, padx=(3, 2), sticky='NWSE')
+
+        # For selecting event recurrence amount
+        self._current_event_recurrence_amount = tk.StringVar(self._event_entry_secondary_frame)
+        self._current_event_recurrence_amount.set(1)
+        self._dropdown_event_recurrence_amount = [i for i in range(1, self._NUMBER_EVENT_RECURRENCE + 1)] + [12, 14, 30, 60, 90, 180, 365]
+        self._event_recurrence_amount_menu = tk.OptionMenu(self._event_entry_secondary_frame, self._current_event_recurrence_amount, *self._dropdown_event_recurrence_amount)
+        self._event_recurrence_amount_menu.grid(row=0, column=7, padx=(2, 3), sticky='NWSE')
+
+        # Recurrence amount label
+        self._event_recurrence_label = tk.Label(self._event_entry_secondary_frame, text='times', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_recurrence_label.grid(row=0, column=8, padx=(0, 0), pady=(0, 2), sticky='NWSE')
+
+        # Leap years check box
+        self._leap_years_mode = tk.IntVar()
+        self._leap_years_mode.set(self._CHECKBUTTON_ON)
+        self._leap_years_checkbutton = tk.Checkbutton(self._event_entry_secondary_frame, text='leap years?', variable=self._leap_years_mode, onvalue=self._CHECKBUTTON_ON, offvalue=self._CHECKBUTTON_OFF, anchor='w', justify='left')
+        self._leap_years_checkbutton.grid(row=0, column=9, padx=(3, 3), pady=(0, 2), sticky='NWSE')
+        
         # Bug: entry widgets do not immediately display correctly without text widget on screen
         # Temporary bug fix
         self._placeholder_frame_widget = tk.Label(self._event_entry_primary_frame, borderwidth=0, highlightthickness=0)
@@ -568,7 +598,7 @@ class Hourglass:
                 for line in lines:
                     key = (line[:4], line[4:6], line[6:8])
                     event_id = str(uuid.uuid4())
-                    event_info = {'hour': line[8:10], 'minute': line[10:12], 'duration_hour': line[12:14], 'duration_minute': line[14:16], 'hex_color': line[16:23], 'description': line[23:].rstrip(), 'ten_minute_notified': False, 'one_minute_notified': False}
+                    event_info = {'hour': line[8:10], 'minute': line[10:12], 'duration_hour': line[12:14], 'duration_minute': line[14:16], 'hex_color': line[16:23], 'recurrence_id': line[23:59], 'frequency': line[59:66], 'amount': line[66:69], 'description': line[69:].strip(), 'ten_minute_notified': False, 'one_minute_notified': False}
                     
                     self._schedule.setdefault(key, {}).update({event_id: event_info})
                 
@@ -604,7 +634,7 @@ class Hourglass:
                 # Write events into file
                 for key in self._schedule:
                     for event_id, event_info in self._schedule[key].items():
-                        line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('duration_hour') + event_info.get('duration_minute') + event_info.get('hex_color') + event_info.get('description').rstrip() + '\n'
+                        line = key[0] + key[1] + key[2] + event_info.get('hour') + event_info.get('minute') + event_info.get('duration_hour') + event_info.get('duration_minute') + event_info.get('hex_color') + event_info.get('recurrence_id') + event_info.get('frequency') + event_info.get('amount') + event_info.get('description').strip() + '\n'
                         self._schedule_file.write(line)
                 
                 # Close schedule file
@@ -614,7 +644,7 @@ class Hourglass:
             self._show_error('unable to write to schedule file.')
             sys.exit(1)
     
-    def _schedule_add(self, key, hour, minute, duration_hour, duration_minute, hex_color, description):
+    def _schedule_add(self, key, hour, minute, duration_hour, duration_minute, hex_color, description, frequency, amount, leap_years):
         """
         Adds an event to the schedule
 
@@ -625,12 +655,47 @@ class Hourglass:
         duration_minute: Event duration minute, mm, string
         hex_color: Hex color, string
         description: Event description, string
+        frequency: Event recurrence frequency, string
+        amount: Event recurrence amount, string
+        leap_years: Whether to account for leap years for yearly recurring events, int
         """
         # Add event
         event_id = str(uuid.uuid4())
-        event_info = {'hour': hour, 'minute': minute, 'duration_hour': duration_hour, 'duration_minute': duration_minute, 'hex_color': hex_color, 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
+        recurrence_id = str(uuid.uuid4())
+        event_info = {'hour': hour, 'minute': minute, 'duration_hour': duration_hour, 'duration_minute': duration_minute, 'hex_color': hex_color, 'recurrence_id': recurrence_id, 'frequency': frequency.rjust(7), 'amount': amount.zfill(3), 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
 
         self._schedule.setdefault(key, {}).update({event_id: event_info})
+
+        # If event is recurring, add its recurrences
+        delta = self._event_recurrence_frequency_dictionary.get(frequency)
+        
+        if delta is not None:
+            # Leap years mode
+            if leap_years == self._CHECKBUTTON_ON and frequency == 'yearly':
+                for i in range(1, int(amount) + 1):
+                    try:
+                        # Recurrence date
+                        date = datetime.datetime(int(key[0]) + i, int(key[1]), int(key[2]))
+                        new_key = (str(date.year), str(date.month).zfill(2), str(date.day).zfill(2))
+
+                        # UUID of this recurrence
+                        event_id = str(uuid.uuid4())
+
+                        # Add recurrence
+                        self._schedule.setdefault(new_key, {}).update({event_id: event_info})
+                    except:
+                        pass
+            else:
+                for i in range(1, int(amount) + 1):
+                    # Recurrence date
+                    date = datetime.datetime(int(key[0]), int(key[1]), int(key[2])) + datetime.timedelta(days=i * delta)
+                    new_key = (str(date.year), str(date.month).zfill(2), str(date.day).zfill(2))
+
+                    # UUID of this recurrence
+                    event_id = str(uuid.uuid4())
+
+                    # Add recurrence
+                    self._schedule.setdefault(new_key, {}).update({event_id: event_info})
 
         # Update displayed week
         self._update_week()
@@ -733,7 +798,7 @@ class Hourglass:
                 # Display each event
                 if events is not None:
                     for event_id, event_info in events.items():
-                        self._week_events_labels[i].append(tk.Label(self._week_days[i], text=event_info.get('hour') + ':' + event_info.get('minute') + ' ' + event_info.get('description').rstrip(), anchor='nw', justify='left'))
+                        self._week_events_labels[i].append(tk.Label(self._week_days[i], text=event_info.get('hour') + ':' + event_info.get('minute') + ' ' + event_info.get('description').strip(), anchor='nw', justify='left'))
                         self._week_events_labels[i][-1].config({'foreground': self._light_or_dark_mode_text(tuple(int(event_info.get('hex_color')[1:][j:j + 2], 16) for j in (0, 2, 4)))})
                         self._week_events_labels[i][-1].config({'background': event_info.get('hex_color')})
                         self._week_events_labels[i][-1].config({'wraplength': self._EVENT_LABEL_WRAPLENGTH})
@@ -854,7 +919,7 @@ class Hourglass:
         When enter is pressed and focus is on the event entry widget, remove focus and add event
         """
         if self._event_entry.get() != ' add new event...':
-            self._schedule_add(self._get_event_date(), self._get_event_hour(), self._get_event_minute(), self._get_event_duration_hour(), self._get_event_duration_minute(), self._current_event_hex, self._event_entry.get().lstrip())
+            self._schedule_add(self._get_event_date(), self._get_event_hour(), self._get_event_minute(), self._get_event_duration_hour(), self._get_event_duration_minute(), self._current_event_hex, self._event_entry.get().strip(), self._current_event_recurrence_frequency.get(), self._current_event_recurrence_amount.get(), self._leap_years_mode.get())
             self._event_entry.delete(0, tk.END)
 
         self._event_entry_unfocus()
@@ -911,7 +976,7 @@ class Hourglass:
                 lines = self._to_do_list_file.readlines()
 
                 for line in lines:
-                    self._to_do_list.append(line.rstrip())
+                    self._to_do_list.append(line.strip())
                 
                 # Close to-do list file
                 self._to_do_list_file.close()
@@ -944,7 +1009,7 @@ class Hourglass:
 
                 # Write to to-do list file
                 for item in self._to_do_list:
-                    self._to_do_list_file.write(item.rstrip() + '\n')
+                    self._to_do_list_file.write(item.strip() + '\n')
                 
                 # Close to-do list file
                 self._to_do_list_file.close()
@@ -962,10 +1027,10 @@ class Hourglass:
         try:
             index = self._to_do_list.index(item)
 
-            if self._to_do_list[index][0] == str(self._TO_DO_LIST_TASK_OFF):
-                self._to_do_list[index] = str(self._TO_DO_LIST_TASK_ON) + self._to_do_list[index][1:]
+            if self._to_do_list[index][0] == str(self._CHECKBUTTON_OFF):
+                self._to_do_list[index] = str(self._CHECKBUTTON_ON) + self._to_do_list[index][1:]
             else:
-                self._to_do_list[index] = str(self._TO_DO_LIST_TASK_OFF) + self._to_do_list[index][1:]
+                self._to_do_list[index] = str(self._CHECKBUTTON_OFF) + self._to_do_list[index][1:]
         except:
             self._show_error('no such to-do list task.')
         
@@ -977,7 +1042,7 @@ class Hourglass:
 
         item: Item to be added, string
         """
-        self._to_do_list.append(str(self._TO_DO_LIST_TASK_OFF) + item)
+        self._to_do_list.append(str(self._CHECKBUTTON_OFF) + item)
 
         self._update_to_do()
     
@@ -1025,7 +1090,7 @@ class Hourglass:
         When enter is pressed and focus is on the to-do entry widget, remove focus and add to-do
         """
         if self._to_do_entry.get() != ' add new to-do...':
-            self._to_do_list_add(self._to_do_entry.get().lstrip())
+            self._to_do_list_add(self._to_do_entry.get().strip())
             self._to_do_entry.delete(0, tk.END)
 
         self._to_do_entry_unfocus()
@@ -1046,7 +1111,7 @@ class Hourglass:
                 item = self._to_do_list[i]
                 self._to_do_list_button_states[i].set(int(item[:1]))
 
-                self._to_do_list_display.append(tk.Checkbutton(self._to_do_list_frame, text=item[1:], variable=self._to_do_list_button_states[i], onvalue=self._TO_DO_LIST_TASK_ON, offvalue=self._TO_DO_LIST_TASK_OFF, anchor='w', justify='left', command=lambda item=item: self._to_do_list_toggle(item)))
+                self._to_do_list_display.append(tk.Checkbutton(self._to_do_list_frame, text=item[1:], variable=self._to_do_list_button_states[i], onvalue=self._CHECKBUTTON_ON, offvalue=self._CHECKBUTTON_OFF, anchor='w', justify='left', command=lambda item=item: self._to_do_list_toggle(item)))
                 self._to_do_list_display[-1].config({'foreground': self._label_text_color})
                 self._to_do_list_display[-1].config({'background': self._widget_color})
                 self._to_do_list_display[-1].config({'highlightthickness': 0})
@@ -1146,7 +1211,7 @@ class Hourglass:
                 if child in [self._time_separator_label, self._date_separator_label]:
                     child.config({'foreground': self._label_text_color})
                     child.config({'background': self._background_color})
-                elif child in [self._event_duration_label, self._event_duration_hour_label, self._event_duration_minute_label]:
+                elif parent is self._event_entry_secondary_frame:
                     child.config({'foreground': self._prompt_text_color})
                     child.config({'background': self._background_color})
                 else:
@@ -1169,8 +1234,12 @@ class Hourglass:
                 child.config({'background': self._background_color})
             
             elif type(child) is tk.Checkbutton:
-                child.config({'foreground': self._label_text_color})
-                child.config({'background': self._widget_color})
+                if child is self._leap_years_checkbutton:
+                    child.config({'foreground': self._prompt_text_color})
+                    child.config({'background': self._background_color})
+                else:
+                    child.config({'foreground': self._label_text_color})
+                    child.config({'background': self._widget_color})
 
             elif type(child) is tk.Frame:
                 if child in [self._week_frame, self._week_buttons_frame, self._calendar_frame, self._month_buttons_frame, self._to_do_frame] or child is self._to_do_list_frame or child in self._week_days:
