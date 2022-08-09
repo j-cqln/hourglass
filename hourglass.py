@@ -106,7 +106,7 @@ class Hourglass:
         self._set_theme_mode(change=False)
 
         # Allow all components of the GUI to be focusable on left click
-        self._root.bind_all('<Button-1>', lambda event: event.widget.focus_set())
+        self._root.bind_all('<Button-1>', lambda event: self._widget_focus(event.widget))
 
         # Set up notification function
         self._notify()
@@ -313,7 +313,7 @@ class Hourglass:
         self._event_entry.bind('<Return>', self._event_entry_enter)
         self._event_entry.grid(row=0, column=0, padx=(0, 3), sticky='NWSE')
 
-        # For selection color
+        # For selecting color
         self._color_selection_label = tk.Label(self._event_entry_primary_frame, text='✏', borderwidth=0, highlightthickness=0)
         self._color_selection_label.bind('<Button-1>', self._choose_color)
         self._color_selection_label.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
@@ -700,9 +700,9 @@ class Hourglass:
         # Update displayed week
         self._update_week()
     
-    def _schedule_remove(self, key, event_id):
+    def _schedule_edit_remove(self, key, event_id):
         """
-        Removes an event from the schedule
+        Edits or removes a scheduled event and, optionally, its recurrences, if any
 
         key: Tuple of strings, (yyyy, mm, dd)
         event_id: unique identifier of the event, UUID, string
@@ -712,11 +712,37 @@ class Hourglass:
             value = self._schedule.get(key)
             event_info = value.get(event_id)
 
-            popup = messagebox.askokcancel('remove event?', 'you are about to remove the event "' + self._schedule[key][event_id]['description'] + '" at ' + self._schedule[key][event_id]['hour'] + ':' + self._schedule[key][event_id]['minute'] + ' on ' + key[1] + '/' + key[2] + '.', icon='warning')
+            if value is not None and event_info is not None:
+                popup = EventMenu(self._root, self._is_dark_mode, key, event_info, self._NUMBER_MINUTES_IN_HOUR, self._NUMBER_HOURS_IN_DAY)
+                result = popup.show()
+                popup = None
 
-            # Remove if user selects OK
-            if popup and value is not None and event_info is not None:
-                del self._schedule[key][event_id]
+                # Edit or remove event(s) based on user response
+                if result[0] == 'remove':
+                    del self._schedule[key][event_id]
+
+                elif result[0] == 'remove_all':
+                    keys_list = []
+                    recurrence_id = event_info.get('recurrence_id')
+
+                    for date_key, events in self._schedule.items():
+                        for uuid_key, info in events.items():
+                            if info.get('recurrence_id') == recurrence_id:
+                                keys_list.append((date_key, uuid_key))
+                    
+                    for item in keys_list:
+                        del self._schedule[item[0]][item[1]]
+
+                elif result[0] == 'edit':
+                    self._schedule[key][event_id] = result[1]
+                
+                elif result[0] == 'edit_all':
+                    recurrence_id = event_info.get('recurrence_id')
+
+                    for date_key, events in self._schedule.items():
+                        for uuid_key, info in events.items():
+                            if info.get('recurrence_id') == recurrence_id:
+                                self._schedule[date_key][uuid_key] = result[1]
         except:
             self._show_error('no such scheduled event.')
         
@@ -803,7 +829,7 @@ class Hourglass:
                         self._week_events_labels[i][-1].config({'background': event_info.get('hex_color')})
                         self._week_events_labels[i][-1].config({'wraplength': self._EVENT_LABEL_WRAPLENGTH})
                         self._week_events_labels[i][-1].bind('<Button-1>', lambda event: event.widget.lift())
-                        self._week_events_labels[i][-1].bind('<Button-2>', lambda event, key=key, event_id=event_id: self._schedule_remove(key, event_id))
+                        self._week_events_labels[i][-1].bind('<Button-2>', lambda event, key=key, event_id=event_id: self._schedule_edit_remove(key, event_id))
 
                         # Event display size based on duration
                         y = self._fraction_of_day(int(event_info.get('hour')), int(event_info.get('minute')))
@@ -1265,6 +1291,18 @@ class Hourglass:
         """
         widget.config({'background': self._widget_color})
     
+    def _widget_focus(self, widget):
+        """
+        If widget exists, sets focus on it
+
+        widget: The widget to focus on, tkinter widget
+        """
+        try:
+            if widget.winfo_exists():
+                widget.focus_set()
+        except:
+            pass
+    
     def _clear_day(self, parent):
         """
         Clears displayed events of a day
@@ -1298,7 +1336,7 @@ class Hourglass:
         Returns the text color to be used on the given background color
 
         rgb: Given background color, tuple
-        return: Text color to be used as a hex color, string
+        return: Hex color, string
         """
         r, g, b = rgb
         
@@ -1361,6 +1399,362 @@ class Hourglass:
         message: Error message, string
         """
         msg = messagebox.showerror('hourglass error', message)
+
+class EventMenu:
+    """
+    Class for the event edit/remove menu
+
+    Creates a GUI popup for Hourglass
+    """
+    def __init__(self, parent, darkmode, key, event_info, minutes_in_hour, hours_in_day):
+        """
+        """
+        self._NUMBER_MINUTES_IN_HOUR = minutes_in_hour
+        self._NUMBER_HOURS_IN_DAY = hours_in_day
+
+        self._set_colors(darkmode)
+        self._dark_mode_display_text_color = '#c2c2c2'
+        self._light_mode_display_text_color = '#4b4b4b'
+
+        self._key = key
+        self._event_info = event_info.copy()
+        self._current_event_hex = self._event_info.get('hex_color')
+        self._selected = None
+
+        # Window
+        self._root = tk.Toplevel(parent)
+
+        # Title
+        self._root.title('edit event...')
+        
+        # Font
+        self._root.option_add('*Font', 'helvetica')
+
+        # Set window size
+        self._width = 500
+        self._height = 300
+        self._root.geometry('%sx%s' % (self._width, self._height))
+
+        # Window not resizable
+        self._root.wm_resizable(False, False)
+        self._root.update()
+
+        # Row and column weights for widget placement
+        self._root.columnconfigure(0, weight=1)
+        
+        self._root.rowconfigure(0, weight=0)
+        self._root.rowconfigure(1, weight=0)
+        self._root.rowconfigure(2, weight=0)
+        self._root.rowconfigure(3, weight=1)
+        self._root.rowconfigure(4, weight=0)
+
+        # Set up widgets
+        self._date_recurrence_setup()
+        self._time_color_duration_setup()
+        self._text_setup()
+        self._buttons_setup()
+
+        self._change_colors()
+    
+    def _date_recurrence_setup(self):
+        """
+        Sets up the event date and event recurrence component of the popup window
+        """
+        # Frame for date and recurrence
+        self._date_recurrence_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._date_recurrence_frame.grid(row=0, column=0, padx=(6, 6), pady=(6, 3), sticky='NWSE')
+        
+        self._date_recurrence_frame.columnconfigure(0, weight=0)
+        self._date_recurrence_frame.columnconfigure(1, weight=0)
+
+        # Event date
+        self._date_label = tk.Label(self._date_recurrence_frame, text=calendar.month_name[int(self._key[1])] + ' ' + self._key[2] + ', ' + self._key[0], borderwidth=0, highlightthickness=0)
+        self._date_label.grid(row=0, column=0, padx=(0, 3), sticky='NWSE')
+
+        # Event recurrence
+        if self._event_info.get('frequency').strip() == 'none':
+            recurrence_text = 'Not recurring'
+        else:
+            recurrence_text = 'Recurring ' + self._event_info.get('frequency').strip() + ', ' + str(int(self._event_info.get('amount'))) + ' times'
+        
+        self._recurrence_label = tk.Label(self._date_recurrence_frame, text=recurrence_text, borderwidth=0, highlightthickness=0)
+        self._recurrence_label.grid(row=0, column=1, padx=(3, 0), sticky='NWSE')
+
+    def _time_color_duration_setup(self):
+        """
+        Sets up the event time, color, and event duration component of the popup window
+        """
+        # Frame for start time and color
+        self._time_color_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._time_color_frame.grid(row=1, column=0, padx=(6, 6), pady=(3, 3), sticky='NWSE')
+        
+        self._time_color_frame.columnconfigure(0, weight=1)
+
+        for i in range(4):
+            self._time_color_frame.columnconfigure(i, weight=0)
+
+        # Frame for duration
+        self._duration_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._duration_frame.grid(row=2, column=0, padx=(6, 6), pady=(3, 3), sticky='NWSE')
+
+        # For selecting color
+        self._color_selection_label = tk.Label(self._time_color_frame, text='   ✏   ', borderwidth=0, highlightthickness=0)
+        self._color_selection_label.bind('<Button-1>', self._choose_color)
+        self._color_selection_label.grid(row=0, column=0, padx=(0, 3), sticky='NWSE')
+
+        # For selecting event start time
+        # For selecting event start hour
+        self._current_event_hour = tk.StringVar(self._time_color_frame)
+        self._current_event_hour.set(self._event_info.get('hour'))
+        self._dropdown_hours = [str(i).zfill(2) for i in range(0, self._NUMBER_HOURS_IN_DAY)]
+        self._hour_selection_menu = tk.OptionMenu(self._time_color_frame, self._current_event_hour, *self._dropdown_hours)
+        self._hour_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
+        self._hour_selection_menu.grid(row=0, column=1, padx=(3, 0), pady=(2, 0), sticky='NWSE')
+
+        # For hour:minute formatting
+        self._time_separator_label = tk.Label(self._time_color_frame, text=':', justify='center', borderwidth=0, highlightthickness=0)
+        self._time_separator_label.grid(row=0, column=2, sticky='NWSE')
+
+        # For selecting event start minute
+        self._current_event_minute = tk.StringVar(self._time_color_frame)
+        self._current_event_minute.set(self._event_info.get('minute'))
+        self._dropdown_minutes = [str(i).zfill(2) for i in range(self._NUMBER_MINUTES_IN_HOUR)]
+        self._minute_selection_menu = tk.OptionMenu(self._time_color_frame, self._current_event_minute, *self._dropdown_minutes)
+        self._minute_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
+        self._minute_selection_menu.grid(row=0, column=3, padx=(1, 0), pady=(2, 0), sticky='NWSE')
+
+        # For selecting event duration
+        # Duration label
+        self._event_duration_label = tk.Label(self._duration_frame, text='duration (optional):', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_label.grid(row=0, column=0, pady=(0, 2), sticky='NWSE')
+
+        # For selecting duration hour
+        self._current_event_duration_hour = tk.StringVar(self._duration_frame)
+        self._current_event_duration_hour.set(self._event_info.get('duration_hour'))
+        self._dropdown_duration_hour = [str(i).zfill(2) for i in range(self._NUMBER_HOURS_IN_DAY)]
+        self._duration_hour_menu = tk.OptionMenu(self._duration_frame, self._current_event_duration_hour, *self._dropdown_duration_hour)
+        self._duration_hour_menu.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
+
+        # Duration hour label
+        self._event_duration_hour_label = tk.Label(self._duration_frame, text='hour(s)', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_hour_label.grid(row=0, column=2, pady=(0, 2), sticky='NWSE')
+
+        # For selecting duration minute
+        self._current_event_duration_minute = tk.StringVar(self._duration_frame)
+        self._current_event_duration_minute.set(self._event_info.get('duration_minute'))
+        self._dropdown_duration_minute = [str(i).zfill(2) for i in range(self._NUMBER_MINUTES_IN_HOUR)]
+        self._duration_minute_menu = tk.OptionMenu(self._duration_frame, self._current_event_duration_minute, *self._dropdown_duration_minute)
+        self._duration_minute_menu.grid(row=0, column=3, padx=(3, 3), sticky='NWSE')
+
+        # Duration minute label
+        self._event_duration_minute_label = tk.Label(self._duration_frame, text='minute(s)', justify='center', borderwidth=0, highlightthickness=0)
+        self._event_duration_minute_label.grid(row=0, column=4, padx=(0, 3), pady=(0, 2), sticky='NWSE')
+
+    def _text_setup(self):
+        """
+        Sets up the event description component of the popup window
+        """
+        # Event description
+        self._text = tk.Text(self._root, width=1, height=1, borderwidth=0, highlightthickness=0)
+        self._text.insert(tk.END, self._event_info.get('description'))
+        self._text.grid(row=3, column=0, padx=(6, 6), pady=(3, 3), sticky='NWSE')
+
+    def _buttons_setup(self):
+        """
+        Sets up the edit/remove and cancel buttons of the popup window
+        """
+        # Frame for buttons
+        self._buttons_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._buttons_frame.grid(row=4, column=0, padx=(6, 6), pady=(3, 6), sticky='NWSE')
+
+        self._buttons_frame.columnconfigure(0, weight=3)
+
+        for i in range(1, 5):
+            self._buttons_frame.columnconfigure(i, weight=2)
+
+        # Edit button
+        self._edit_button = tk.Label(self._buttons_frame, text='edit', borderwidth=0, highlightthickness=0)
+        self._edit_button.bind('<Button-1>', lambda event: self._select(event.widget, 'edit'))
+        self._edit_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._edit_button.grid(row=0, column=0, padx=(50, 3), sticky='NWSE')
+
+        # Edit all button
+        self._edit_all_button = tk.Label(self._buttons_frame, text='edit all', borderwidth=0, highlightthickness=0)
+
+        if self._event_info.get('frequency').strip() != 'none':
+            self._edit_all_button.bind('<Button-1>', lambda event: self._select(event.widget, 'edit_all'))
+
+        self._edit_all_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._edit_all_button.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
+
+        # Remove button
+        self._remove_button = tk.Label(self._buttons_frame, text='remove', borderwidth=0, highlightthickness=0)
+        self._remove_button.bind('<Button-1>', lambda event: self._select(event.widget, 'remove'))
+        self._remove_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._remove_button.grid(row=0, column=2, padx=(3, 3), sticky='NWSE')
+
+        # Remove all button
+        self._remove_all_button = tk.Label(self._buttons_frame, text='remove all', borderwidth=0, highlightthickness=0)
+
+        if self._event_info.get('frequency').strip() != 'none':
+            self._remove_all_button.bind('<Button-1>', lambda event: self._select(event.widget, 'remove_all'))
+
+        self._remove_all_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._remove_all_button.grid(row=0, column=3, padx=(3, 3), sticky='NWSE')
+
+        # Cancel button
+        self._cancel_button = tk.Label(self._buttons_frame, text='cancel', borderwidth=0, highlightthickness=0)
+        self._cancel_button.bind('<Button-1>', lambda event: self._select(event.widget, None))
+        self._cancel_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._cancel_button.grid(row=0, column=4, padx=(3, 0), sticky='NWSE')
+    
+    def _choose_color(self, *args):
+        """
+        Selects color for event
+        """
+        self._color_selection_dialog = askcolor(title='choose new event color...')
+        self._color_selection_label.config({'background': self._color_selection_dialog[1]})
+        self._current_event_hex = self._color_selection_dialog[1]
+        
+        if self._color_selection_dialog[0] is not None:
+            (r, g, b) = self._color_selection_dialog[0]
+            self._color_selection_label.config({'foreground': self._light_or_dark_mode_text((r, g, b))})
+    
+    def _select(self, widget, selection):
+        """
+        Selects action for event
+
+        widget: The widget clicked by the user to make the selection
+        selection: Action for the event, either the strings 'edit', 'edit_all', 'remove', 'remove_all', or None for cancel
+        """
+        self._widget_pressed(widget)
+
+        self._selected = selection
+
+        if selection is not None:
+            self._event_info['hour'] = self._current_event_hour.get()
+            self._event_info['minute'] = self._current_event_minute.get()
+            self._event_info['duration_hour'] = self._current_event_duration_hour.get()
+            self._event_info['duration_minute'] = self._current_event_duration_minute.get()
+            self._event_info['hex_color'] = self._current_event_hex
+            self._event_info['description'] = self._text.get('1.0', tk.END).strip()
+
+        self._root.destroy()
+    
+    def _set_colors(self, darkmode):
+        """
+        Sets colors used by application
+        """
+        if darkmode:
+            # Dark mode colors
+            self._prompt_text_color = '#838383'
+            self._entry_text_color = '#c2c2c2'
+            self._label_text_color = '#c2c2c2'
+            self._menu_text_color = '#ebebeb'
+            self._background_color = '#2c2c2c'
+            self._widget_color = '#383838'
+            self._pressed_widget_color = '#2e2e2e'
+            self._faint_text_color = '#494949'
+            self._faint_display_color = '#424242'
+        else:
+            # Light mode colors
+            self._prompt_text_color = '#797979'
+            self._entry_text_color = '#4b4b4b'
+            self._label_text_color = '#4b4b4b'
+            self._menu_text_color = '#505050'
+            self._background_color = '#d3d3d3'
+            self._widget_color = '#b3b3b3'
+            self._pressed_widget_color = '#969696'
+            self._faint_text_color = '#a5a5a5'
+            self._faint_display_color = '#a1a1a1'
+    
+    def _change_colors(self, parent=None):
+        """
+        Changes colors for widget and all descendant widgets based on current theme mode
+
+        parent: Widget to change color for, tkinter widget
+        """
+        # If no widget provided, start at root
+        if parent is None:
+            parent = self._root
+            parent.config({'background': self._background_color})
+        
+        # Change color for all descendant widgets
+        for child in parent.winfo_children():
+            if child.winfo_children():
+                self._change_colors(parent=child)
+
+            if type(child) is tk.Label:
+                if child is self._color_selection_label:
+                    child.config({'foreground': self._light_or_dark_mode_text(tuple(int(self._current_event_hex[1:][i:i + 2], 16) for i in (0, 2, 4)))})
+                    child.config({'background': self._current_event_hex})
+                elif parent is self._date_recurrence_frame:
+                    child.config({'foreground': self._entry_text_color})
+                    child.config({'background': self._background_color})
+                elif parent is self._time_color_frame:
+                    child.config({'foreground': self._label_text_color})
+                    child.config({'background': self._background_color})
+                elif parent is self._duration_frame:
+                    child.config({'foreground': self._prompt_text_color})
+                    child.config({'background': self._background_color})
+                elif self._event_info.get('frequency').strip() == 'none' and child in [self._edit_all_button, self._remove_all_button]:
+                    child.config({'foreground': self._faint_text_color})
+                    child.config({'background': self._widget_color})
+                else:
+                    child.config({'foreground': self._label_text_color})
+                    child.config({'background': self._widget_color})
+            
+            elif type(child) is tk.OptionMenu:
+                child.config({'foreground': self._menu_text_color})
+                child.config({'background': self._background_color})
+            
+            elif type(child) is tk.Text:
+                child.config({'foreground': self._prompt_text_color})
+                child.config({'background': self._widget_color})
+
+            elif type(child) is tk.Frame:
+                child.config({'background': self._background_color})
+    
+    def _light_or_dark_mode_text(self, rgb):
+        """
+        Returns the text color to be used on the given background color
+
+        rgb: Given background color, tuple
+        return: Hex color, string
+        """
+        r, g, b = rgb
+        
+        # Formula from alienryderflex.com/hsp.html
+        if (0.299 * r**2 + 0.587 * g**2 + 0.114 * b**2) > 16256:
+            return self._light_mode_display_text_color
+        else:
+            return self._dark_mode_display_text_color
+    
+    def _widget_pressed(self, widget):
+        """
+        Sets widget to pressed appearance
+
+        widget: The pressed widget, tkinter widget
+        """
+        widget.config({'background': self._pressed_widget_color})
+
+    def _widget_released(self, widget):
+        """
+        Restores given widget to unpressed appearance
+        
+        widget: The pressed widget, tkinter widget
+        """
+        widget.config({'background': self._widget_color})
+
+    def show(self):
+        """
+        Shows the popup window and waits for it to be closed, then returning the user's modifications to the event
+
+        return: Tuple containing the selection of the user and the modifications to the event information
+        """
+        self._root.deiconify()
+        self._root.wait_window(self._root)
+        return (self._selected, self._event_info)
 
 if __name__ == '__main__':
     Hourglass()
