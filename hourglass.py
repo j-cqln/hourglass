@@ -418,7 +418,7 @@ class Hourglass:
         # For selecting event recurrence amount
         self._current_event_recurrence_amount = tk.StringVar(self._event_entry_secondary_frame)
         self._current_event_recurrence_amount.set(1)
-        self._dropdown_event_recurrence_amount = [i for i in range(1, self._NUMBER_EVENT_RECURRENCE + 1)] + [12, 14, 30, 60, 90, 180, 365]
+        self._dropdown_event_recurrence_amount = [i for i in range(1, self._NUMBER_EVENT_RECURRENCE + 1)] + [12, 14, 15, 30, 60, 90, 180, 365]
         self._event_recurrence_amount_menu = tk.OptionMenu(self._event_entry_secondary_frame, self._current_event_recurrence_amount, *self._dropdown_event_recurrence_amount)
         self._event_recurrence_amount_menu.grid(row=0, column=7, padx=(2, 3), sticky='NWSE')
 
