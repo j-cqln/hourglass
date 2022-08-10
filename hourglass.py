@@ -226,6 +226,7 @@ class Hourglass:
 
             # Frame for each day
             self._week_days.append(tk.Frame(self._week_frame))
+            self._week_days[i].bind('<Button-1>', lambda event, i=i: self._update_event_entry_date(i))
             self._week_days[i].grid(row=2, column=i, sticky='NWSE')
 
             self._week_days[i].columnconfigure(0, weight=0)
@@ -977,6 +978,18 @@ class Hourglass:
         for day in self._dropdown_days:
             self._day_selection_menu['menu'].add_command(label=day, command=lambda day=day: self._current_event_day.set(day))
     
+    def _update_event_entry_date(self, days):
+        """
+        Updates event entry date based on the displayed day clicked by the user
+        
+        days: The clicked day represented as the number of days after the displayed Sunday, int
+        """
+        clicked_day = self._displayed_sunday + datetime.timedelta(days=days)
+
+        self._current_event_year.set(str(clicked_day.year))
+        self._current_event_month.set(str(clicked_day.month).zfill(2))
+        self._current_event_day.set(str(clicked_day.day).zfill(2))
+    
     def _to_do_read(self, file_name):
         """
         Reads from to-do list file
@@ -1226,7 +1239,7 @@ class Hourglass:
         
         # Change color for all descendant widgets
         for child in parent.winfo_children():
-            if child.winfo_children():
+            if type(child) is not tk.Toplevel and child.winfo_children():
                 self._change_colors(parent=child)
             
             if child is self._placeholder_frame_widget or child is self._placeholder_text_widget:
