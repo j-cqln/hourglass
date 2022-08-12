@@ -1421,6 +1421,7 @@ class EventMenu:
     """
     def __init__(self, parent, darkmode, key, event_info, minutes_in_hour, hours_in_day):
         """
+        Initializes the EventMenu class
         """
         self._NUMBER_MINUTES_IN_HOUR = minutes_in_hour
         self._NUMBER_HOURS_IN_DAY = hours_in_day
