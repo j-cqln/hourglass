@@ -69,7 +69,7 @@ class Hourglass:
         self._screen_height = self._root.winfo_screenheight()
         self._width = int(self._screen_width * 0.7)
         self._height = int(self._screen_height * 0.7)
-        self._root.geometry('%sx%s' % (self._width, self._height))
+        self._root.geometry('{}x{}'.format(self._width, self._height))
         self._root.update()
 
         # Adjust minimum and maximum size that GUI can be resized as
@@ -428,7 +428,7 @@ class Hourglass:
         self._event_recurrence_label.grid(row=0, column=8, padx=(0, 0), pady=(0, 2), sticky='NWSE')
 
         # Leap years check box
-        self._leap_years_mode = tk.IntVar()
+        self._leap_years_mode = tk.IntVar(self._event_entry_secondary_frame)
         self._leap_years_mode.set(self._CHECKBUTTON_ON)
         self._leap_years_checkbutton = tk.Checkbutton(self._event_entry_secondary_frame, text='leap years?', variable=self._leap_years_mode, onvalue=self._CHECKBUTTON_ON, offvalue=self._CHECKBUTTON_OFF, anchor='w', justify='left')
         self._leap_years_checkbutton.grid(row=0, column=9, padx=(3, 3), pady=(0, 2), sticky='NWSE')
@@ -1015,7 +1015,10 @@ class Hourglass:
                 lines = self._to_do_list_file.readlines()
 
                 for line in lines:
-                    self._to_do_list.append(line.strip())
+                    key = str(uuid.uuid4())
+                    contents = line.strip()
+                    item = {'key': key, 'completion': contents[0], 'description': contents[1:]}
+                    self._to_do_list.append(item)
                 
                 # Close to-do list file
                 self._to_do_list_file.close()
@@ -1048,7 +1051,7 @@ class Hourglass:
 
                 # Write to to-do list file
                 for item in self._to_do_list:
-                    self._to_do_list_file.write(item.strip() + '\n')
+                    self._to_do_list_file.write(item.get('completion') + item.get('description').strip() + '\n')
                 
                 # Close to-do list file
                 self._to_do_list_file.close()
@@ -1066,40 +1069,55 @@ class Hourglass:
         try:
             index = self._to_do_list.index(item)
 
-            if self._to_do_list[index][0] == str(self._CHECKBUTTON_OFF):
-                self._to_do_list[index] = str(self._CHECKBUTTON_ON) + self._to_do_list[index][1:]
+            if self._to_do_list[index].get('completion') == str(self._CHECKBUTTON_OFF):
+                self._to_do_list[index]['completion'] = str(self._CHECKBUTTON_ON)
             else:
-                self._to_do_list[index] = str(self._CHECKBUTTON_OFF) + self._to_do_list[index][1:]
+                self._to_do_list[index]['completion'] = str(self._CHECKBUTTON_OFF)
         except:
             self._show_error('no such to-do list task.')
         
         self._update_to_do()
     
-    def _to_do_list_add(self, item):
+    def _to_do_list_add(self, description):
         """
         Adds an item to the to-do list
 
-        item: Item to be added, string
+        description: Description of the to-do list item to be added, string
         """
-        self._to_do_list.append(str(self._CHECKBUTTON_OFF) + item)
+        key = str(uuid.uuid4())
+        item = {'key': key, 'completion': str(self._CHECKBUTTON_OFF), 'description': description}
+        self._to_do_list.append(item)
 
         self._update_to_do()
     
-    def _to_do_list_remove(self, item):
+    def _to_do_list_edit_remove(self, index, total, item):
         """
-        Removes an item from the to-do list
+        Edits or removes an item from the to-do list
 
+        index: The index of the clicked item in the to-do list, int
+        total: The number of items in the to-do list, int
         item: Item to be removed, string
         """
-        popup = messagebox.askokcancel('remove task?', 'you are about to remove the task "' + item[1:] + '".', icon='warning')
+        try:
+            # Retrieve item key
+            key = self._to_do_list[index].get('key')
 
-        # Remove if user selects OK
-        if popup:
-            try:
-                index = self._to_do_list.index(item)
-                del self._to_do_list[index]
-            except:
-                self._show_error('no such to-do list task.')
+            if key is not None:
+                popup = ToDoMenu(self._root, self._is_dark_mode, index, total, item, self._CHECKBUTTON_ON, self._CHECKBUTTON_OFF)
+                result = popup.show()
+                popup = None
+
+                # Edit or remove item based on user response
+                if result[0] == 'remove':
+                    if self._to_do_list[index]['key'] == key:
+                        del self._to_do_list[index]
+
+                elif result[0] == 'edit':
+                    if self._to_do_list[index]['key'] == key:
+                        del self._to_do_list[index]
+                        self._to_do_list.insert(result[1], result[2])
+        except:
+            self._show_error('no such to-do list task.')
         
         # Update displayed to-do list
         self._update_to_do()
@@ -1146,15 +1164,17 @@ class Hourglass:
             self._clear_to_do_list_display()
 
             # Display all to-do list items
-            for i in range(len(self._to_do_list)):
-                item = self._to_do_list[i]
-                self._to_do_list_button_states[i].set(int(item[:1]))
+            total = len(self._to_do_list)
 
-                self._to_do_list_display.append(tk.Checkbutton(self._to_do_list_frame, text=item[1:], variable=self._to_do_list_button_states[i], onvalue=self._CHECKBUTTON_ON, offvalue=self._CHECKBUTTON_OFF, anchor='w', justify='left', command=lambda item=item: self._to_do_list_toggle(item)))
+            for i in range(total):
+                item = self._to_do_list[i]
+                self._to_do_list_button_states[i].set(int(item.get('completion')))
+
+                self._to_do_list_display.append(tk.Checkbutton(self._to_do_list_frame, text=item.get('description'), variable=self._to_do_list_button_states[i], onvalue=self._CHECKBUTTON_ON, offvalue=self._CHECKBUTTON_OFF, anchor='w', justify='left', command=lambda item=item: self._to_do_list_toggle(item)))
                 self._to_do_list_display[-1].config({'foreground': self._label_text_color})
                 self._to_do_list_display[-1].config({'background': self._widget_color})
                 self._to_do_list_display[-1].config({'highlightthickness': 0})
-                self._to_do_list_display[-1].bind('<Button-2>', lambda event, i=i, item=item: self._to_do_list_remove(item))
+                self._to_do_list_display[-1].bind('<Button-2>', lambda event, i=i, total=total, item=item: self._to_do_list_edit_remove(i, total, item))
                 self._to_do_list_display[-1].grid(row=i, column=0, padx=(2, 2), sticky='NWSE')
         except:
             self._show_error('unable to load or update to-do list.')
@@ -1202,6 +1222,8 @@ class Hourglass:
     def _set_colors(self, darkmode):
         """
         Sets colors used by application
+
+        darkmode: Whether the application is currently in dark mode or not, boolean
         """
         if darkmode:
             # Dark mode colors
@@ -1422,14 +1444,24 @@ class EventMenu:
     def __init__(self, parent, darkmode, key, event_info, minutes_in_hour, hours_in_day):
         """
         Initializes the EventMenu class
+
+        parent: Parent widget, tkinter widget
+        darkmode: Whether the parent is currently in dark mode or not, boolean
+        key: Tuple of strings, (yyyy, mm, dd)
+        event_info: Event information, dict
+        minutes_in_hour: The number of minutes in an hour, int
+        hours_in_day: The number of hours in a day, int
         """
+        # Constants for time units
         self._NUMBER_MINUTES_IN_HOUR = minutes_in_hour
         self._NUMBER_HOURS_IN_DAY = hours_in_day
 
+        # Set colors
         self._set_colors(darkmode)
         self._dark_mode_display_text_color = '#c2c2c2'
         self._light_mode_display_text_color = '#4b4b4b'
 
+        # Set event information
         self._key = key
         self._event_info = event_info.copy()
         self._current_event_hex = self._event_info.get('hex_color')
@@ -1447,7 +1479,12 @@ class EventMenu:
         # Set window size
         self._width = 500
         self._height = 300
-        self._root.geometry('%sx%s' % (self._width, self._height))
+        self._root.geometry('{}x{}'.format(self._width, self._height))
+
+        # Set window position
+        self._x = parent.winfo_x() + int(parent.winfo_width() / 4)
+        self._y = parent.winfo_y() + int(parent.winfo_height() / 4)
+        self._root.geometry('+{}+{}'.format(self._x, self._y))
 
         # Window not resizable
         self._root.wm_resizable(False, False)
@@ -1657,7 +1694,9 @@ class EventMenu:
     
     def _set_colors(self, darkmode):
         """
-        Sets colors used by application
+        Sets colors used by popup
+
+        darkmode: Whether the application is currently in dark mode or not, boolean
         """
         if darkmode:
             # Dark mode colors
@@ -1769,6 +1808,254 @@ class EventMenu:
         self._root.deiconify()
         self._root.wait_window(self._root)
         return (self._selected, self._event_info)
+
+class ToDoMenu:
+    """
+    Class for the to-do edit/remove menu
+
+    Creates a GUI popup for Hourglass
+    """
+    def __init__(self, parent, darkmode, index, total, item, checkbutton_on, checkbutton_off):
+        """
+        Initializes the ToDoMenu class
+
+        parent: Parent widget, tkinter widget
+        darkmode: Whether the parent is currently in dark mode or not, boolean
+        index: The index of the clicked item in the to-do list, int
+        total: The number of items in the to-do list, int
+        item: The to-do list item, dict
+        checkbutton_on: 'On' state of checkbuttons, int
+        checkbutton_off: 'Off' state of checkbuttons, int
+        """
+        # Constants for on/off values of check boxes
+        self._CHECKBUTTON_ON = checkbutton_on
+        self._CHECKBUTTON_OFF = checkbutton_off
+
+        # Set colors
+        self._set_colors(darkmode)
+
+        # Set to-do list item information
+        self._item = item.copy()
+        self._index = index
+        self._total = total
+        self._selected = None
+
+        # Window
+        self._root = tk.Toplevel(parent)
+
+        # Title
+        self._root.title('edit to-do...')
+        
+        # Font
+        self._root.option_add('*Font', 'helvetica')
+
+        # Set window size
+        self._width = 500
+        self._height = 300
+        self._root.geometry('{}x{}'.format(self._width, self._height))
+
+        # Set window position
+        self._x = parent.winfo_x() + int(parent.winfo_width() / 4)
+        self._y = parent.winfo_y() + int(parent.winfo_height() / 4)
+        self._root.geometry('+{}+{}'.format(self._x, self._y))
+
+        # Window not resizable
+        self._root.wm_resizable(False, False)
+        self._root.update()
+
+        # Row and column weights for widget placement
+        self._root.columnconfigure(0, weight=1)
+        
+        self._root.rowconfigure(0, weight=0)
+        self._root.rowconfigure(1, weight=1)
+        self._root.rowconfigure(2, weight=0)
+
+        # Set up widgets
+        self._index_completion_setup()
+        self._text_setup()
+        self._buttons_setup()
+
+        self._change_colors()
+    
+    def _index_completion_setup(self):
+        """
+        Sets up the to-do item index and completion status component of the popup window
+        """
+        # Frame for to-do task index
+        self._index_completion_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._index_completion_frame.grid(row=0, column=0, padx=(6, 6), pady=(6, 3), sticky='NWSE')
+        
+        self._index_completion_frame.columnconfigure(0, weight=0)
+        self._index_completion_frame.columnconfigure(1, weight=0)
+
+        # Item index
+        self._index_label = tk.Label(self._index_completion_frame, text='rank:', borderwidth=0, highlightthickness=0)
+        self._index_label.grid(row=0, column=0, sticky='NWSE')
+
+        # For selecting item index
+        self._current_item_index = tk.IntVar(self._index_completion_frame)
+        self._current_item_index.set(self._index + 1)
+        self._dropdown_indices = [i for i in range(1, self._total + 1)]
+        self._hour_selection_menu = tk.OptionMenu(self._index_completion_frame, self._current_item_index, *self._dropdown_indices)
+        self._hour_selection_menu.config({'borderwidth': 0, 'highlightthickness': 0})
+        self._hour_selection_menu.grid(row=0, column=1, padx=(3, 3), pady=(2, 0), sticky='NWSE')
+
+        # For selecting item completion
+        self._completion = tk.IntVar(self._index_completion_frame)
+        self._completion.set(self._item.get('completion'))
+        self._completion_checkbutton = tk.Checkbutton(self._index_completion_frame, text='complete', variable=self._completion, onvalue=self._CHECKBUTTON_ON, offvalue=self._CHECKBUTTON_OFF, anchor='w', justify='left')
+        self._completion_checkbutton.config({'highlightthickness': 0})
+        self._completion_checkbutton.grid(row=0, column=2, padx=(3, 0), pady=(2, 0), sticky='NWSE')
+
+    def _text_setup(self):
+        """
+        Sets up the to-do item description component of the popup window
+        """
+        # To-do item description
+        self._text = tk.Text(self._root, width=1, height=1, borderwidth=0, highlightthickness=0)
+        self._text.insert(tk.END, self._item.get('description'))
+        self._text.grid(row=1, column=0, padx=(6, 6), pady=(3, 3), sticky='NWSE')
+
+    def _buttons_setup(self):
+        """
+        Sets up the edit/remove and cancel buttons of the popup window
+        """
+        # Frame for buttons
+        self._buttons_frame = tk.Frame(self._root, borderwidth=0, highlightthickness=0)
+        self._buttons_frame.grid(row=2, column=0, padx=(6, 6), pady=(3, 6), sticky='NWSE')
+
+        self._buttons_frame.columnconfigure(0, weight=3)
+        self._buttons_frame.columnconfigure(1, weight=2)
+        self._buttons_frame.columnconfigure(2, weight=2)
+
+        # Edit button
+        self._edit_button = tk.Label(self._buttons_frame, text='edit', borderwidth=0, highlightthickness=0)
+        self._edit_button.bind('<Button-1>', lambda event: self._select(event.widget, 'edit'))
+        self._edit_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._edit_button.grid(row=0, column=0, padx=(100, 3), sticky='NWSE')
+
+        # Remove button
+        self._remove_button = tk.Label(self._buttons_frame, text='remove', borderwidth=0, highlightthickness=0)
+        self._remove_button.bind('<Button-1>', lambda event: self._select(event.widget, 'remove'))
+        self._remove_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._remove_button.grid(row=0, column=1, padx=(3, 3), sticky='NWSE')
+
+        # Cancel button
+        self._cancel_button = tk.Label(self._buttons_frame, text='cancel', borderwidth=0, highlightthickness=0)
+        self._cancel_button.bind('<Button-1>', lambda event: self._select(event.widget, None))
+        self._cancel_button.bind('<ButtonRelease>', lambda event: self._widget_released(event.widget))
+        self._cancel_button.grid(row=0, column=2, padx=(3, 0), sticky='NWSE')
+    
+    def _select(self, widget, selection):
+        """
+        Selects action for to-do item
+
+        widget: The widget clicked by the user to make the selection
+        selection: Action for the to-do item, either the strings 'edit', 'remove', or None for cancel
+        """
+        self._widget_pressed(widget)
+
+        self._selected = selection
+
+        if selection is not None:
+            self._item['completion'] = str(self._completion.get())
+            self._item['description'] = self._text.get('1.0', tk.END).strip()
+
+        self._root.destroy()
+    
+    def _set_colors(self, darkmode):
+        """
+        Sets colors used by popup
+
+        darkmode: Whether the application is currently in dark mode or not, boolean
+        """
+        if darkmode:
+            # Dark mode colors
+            self._prompt_text_color = '#838383'
+            self._entry_text_color = '#c2c2c2'
+            self._label_text_color = '#c2c2c2'
+            self._menu_text_color = '#ebebeb'
+            self._background_color = '#2c2c2c'
+            self._widget_color = '#383838'
+            self._pressed_widget_color = '#2e2e2e'
+            self._faint_text_color = '#494949'
+            self._faint_display_color = '#424242'
+        else:
+            # Light mode colors
+            self._prompt_text_color = '#797979'
+            self._entry_text_color = '#4b4b4b'
+            self._label_text_color = '#4b4b4b'
+            self._menu_text_color = '#505050'
+            self._background_color = '#d3d3d3'
+            self._widget_color = '#b3b3b3'
+            self._pressed_widget_color = '#969696'
+            self._faint_text_color = '#a5a5a5'
+            self._faint_display_color = '#a1a1a1'
+    
+    def _change_colors(self, parent=None):
+        """
+        Changes colors for widget and all descendant widgets based on current theme mode
+
+        parent: Widget to change color for, tkinter widget
+        """
+        # If no widget provided, start at root
+        if parent is None:
+            parent = self._root
+            parent.config({'background': self._background_color})
+        
+        # Change color for all descendant widgets
+        for child in parent.winfo_children():
+            if child.winfo_children():
+                self._change_colors(parent=child)
+
+            if type(child) is tk.Label:
+                if parent is self._index_completion_frame:
+                    child.config({'foreground': self._label_text_color})
+                    child.config({'background': self._background_color})
+                else:
+                    child.config({'foreground': self._label_text_color})
+                    child.config({'background': self._widget_color})
+            
+            elif type(child) is tk.OptionMenu:
+                child.config({'foreground': self._menu_text_color})
+                child.config({'background': self._background_color})
+            
+            elif type(child) is tk.Checkbutton:
+                child.config({'foreground': self._label_text_color})
+                child.config({'background': self._background_color})
+            
+            elif type(child) is tk.Text:
+                child.config({'foreground': self._prompt_text_color})
+                child.config({'background': self._widget_color})
+
+            elif type(child) is tk.Frame:
+                child.config({'background': self._background_color})
+    
+    def _widget_pressed(self, widget):
+        """
+        Sets widget to pressed appearance
+
+        widget: The pressed widget, tkinter widget
+        """
+        widget.config({'background': self._pressed_widget_color})
+
+    def _widget_released(self, widget):
+        """
+        Restores given widget to unpressed appearance
+        
+        widget: The pressed widget, tkinter widget
+        """
+        widget.config({'background': self._widget_color})
+
+    def show(self):
+        """
+        Shows the popup window and waits for it to be closed, then returning the user's modifications to the to-do list item
+
+        return: Tuple containing the selection of the user, the to-do item index, and modifications of the to-do item information
+        """
+        self._root.deiconify()
+        self._root.wait_window(self._root)
+        return (self._selected, self._current_item_index.get() - 1, self._item)
 
 if __name__ == '__main__':
     Hourglass()
