@@ -660,16 +660,24 @@ class Hourglass:
         amount: Event recurrence amount, string
         leap_years: Whether to account for leap years for yearly recurring events, int
         """
-        # Add event
+        # Event and recurrence UUID
         event_id = str(uuid.uuid4())
         recurrence_id = str(uuid.uuid4())
-        event_info = {'hour': hour, 'minute': minute, 'duration_hour': duration_hour, 'duration_minute': duration_minute, 'hex_color': hex_color, 'recurrence_id': recurrence_id, 'frequency': frequency.rjust(7), 'amount': amount.zfill(3), 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
 
+        # Whether event is recurring
+        delta = self._event_recurrence_frequency_dictionary.get(frequency)
+
+        # Recurrence amount formatting
+        if delta is None:
+            amount = '1'
+        
+        amount = amount.zfill(3)
+
+        # Add event
+        event_info = {'hour': hour, 'minute': minute, 'duration_hour': duration_hour, 'duration_minute': duration_minute, 'hex_color': hex_color, 'recurrence_id': recurrence_id, 'frequency': frequency.rjust(7), 'amount': amount, 'description': description, 'ten_minute_notified': False, 'one_minute_notified': False}
         self._schedule.setdefault(key, {}).update({event_id: event_info})
 
         # If event is recurring, add its recurrences
-        delta = self._event_recurrence_frequency_dictionary.get(frequency)
-        
         if delta is not None:
             # Leap years mode
             if leap_years == self._CHECKBUTTON_ON and frequency == 'yearly':
