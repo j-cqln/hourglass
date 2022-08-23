@@ -1433,7 +1433,7 @@ class Hourglass:
         """
         Displays how-to message
         """
-        msg = messagebox.showinfo('your hourglass', 'press enter to add event/task\nright click to remove\n\nclick on days in monthly calendar to display events for that week\n\nsun/moon → light/dark mode\npencil → custom event color')
+        msg = messagebox.showinfo('your hourglass', 'press enter to add event/task\nright click to edit/remove\n\nclick on days in monthly calendar to display events for that week\n\nsun/moon → light/dark mode\npencil → custom event color')
     
     def _show_error(self, message):
         """
