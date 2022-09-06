@@ -1675,6 +1675,7 @@ class EventMenu:
         self._color_selection_label.config({'background': self._color_selection_dialog[1]})
         self._current_event_hex = self._color_selection_dialog[1]
         
+        # If a color was selected
         if self._color_selection_dialog[0] is not None:
             (r, g, b) = self._color_selection_dialog[0]
             self._color_selection_label.config({'foreground': self._light_or_dark_mode_text((r, g, b))})
