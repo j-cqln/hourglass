@@ -109,6 +109,7 @@ class Hourglass:
         self._root.bind_all('<Button-1>', lambda event: self._widget_focus(event.widget))
 
         # Set up notification function
+        self._notify_mode = 1
         self._notify()
 
         # Application loop
@@ -141,34 +142,48 @@ class Hourglass:
         self._now = datetime.datetime.now()
         
         try:
-            # Check for upcoming events in the current day and the next day
-            for i in range(2):
-                date = self._now + datetime.timedelta(days=i)
-                year = date.strftime('%Y')
-                month = date.strftime('%m')
-                day = date.strftime('%d')
+            if self._notify_mode == 1:
+                # Check for upcoming events in the current day and the next day
+                for i in range(2):
+                    date = self._now + datetime.timedelta(days=i)
+                    year = date.strftime('%Y')
+                    month = date.strftime('%m')
+                    day = date.strftime('%d')
 
-                key = (year, month, day)
-                value = self._schedule.get(key)
+                    key = (year, month, day)
+                    value = self._schedule.get(key)
 
-                if value is not None:
-                    for event_id, event_info in value.items():
-                        delta = datetime.datetime(year=int(year), month=int(month), day=int(day), hour=int(event_info.get('hour')), minute=int(event_info.get('minute'))) - self._now
-                        
-                        # Ten minute notification
-                        if delta.total_seconds() < 600 and delta.total_seconds() > 60 and event_info.get('ten_minute_notified') is False:
-                            event_info['ten_minute_notified'] = True
-                            messagebox.showinfo(message='in ' + str(max(2, int(delta.total_seconds() / 60))) + ' minutes:\n' + event_info.get('description'))
-                        
-                        # One minute notification
-                        elif delta.total_seconds() < 60 and delta.total_seconds() > 0 and event_info.get('one_minute_notified') is False:
-                            event_info['one_minute_notified'] = True
-                            messagebox.showinfo(message='in 1 minute:\n' + event_info.get('description'))
+                    if value is not None:
+                        for event_id, event_info in value.items():
+                            delta = datetime.datetime(year=int(year), month=int(month), day=int(day), hour=int(event_info.get('hour')), minute=int(event_info.get('minute'))) - self._now
+                            
+                            # Ten minute notification
+                            if delta.total_seconds() < 600 and delta.total_seconds() > 60 and event_info.get('ten_minute_notified') is False:
+                                event_info['ten_minute_notified'] = True
+                                messagebox.showinfo(message='in ' + str(max(2, int(delta.total_seconds() / 60))) + ' minutes:\n' + event_info.get('description'))
+                            
+                            # One minute notification
+                            elif delta.total_seconds() < 60 and delta.total_seconds() > 0 and event_info.get('one_minute_notified') is False:
+                                event_info['one_minute_notified'] = True
+                                messagebox.showinfo(message='in 1 minute:\n' + event_info.get('description'))
         except:
             pass
         
         # Update again after 1 second
         self._root.after(1000, self._notify)
+    
+    def _toggle_notify(self, *args):
+        """
+        Toggles notifications on or off
+        """
+        self._widget_pressed(self._notification_label)
+
+        if self._notify_mode == 0:
+            self._notify_mode = 1
+            self._notification_label.config({'text': '⌛︎: on'})
+        else:
+            self._notify_mode = 0
+            self._notification_label.config({'text': '⌛︎: off'})
     
     def _week_setup(self):
         """
@@ -549,10 +564,11 @@ class Hourglass:
         self._settings_frame.grid(row=3, column=1, padx=(6, 6), pady=(3, 7), sticky='NWSE')
         
         self._settings_frame.rowconfigure(0, weight=1)
-        self._settings_frame.columnconfigure(0, weight=3)
+        self._settings_frame.columnconfigure(0, weight=2)
         self._settings_frame.columnconfigure(1, weight=1)
         self._settings_frame.columnconfigure(2, weight=1)
         self._settings_frame.columnconfigure(3, weight=1)
+        self._settings_frame.columnconfigure(4, weight=1)
 
         # For saving
         self._save_label = tk.Label(self._settings_frame, text='save', borderwidth=0, highlightthickness=0)
@@ -560,15 +576,21 @@ class Hourglass:
         self._save_label.bind('<ButtonRelease>', lambda event: self._widget_released(self._save_label))
         self._save_label.grid(row=0, column=1, padx=(0, 3), sticky='NWSE')
 
+        # For toggling notifications
+        self._notification_label = tk.Label(self._settings_frame, text='⌛︎: on', borderwidth=0, highlightthickness=0)
+        self._notification_label.bind('<Button-1>', self._toggle_notify)
+        self._notification_label.bind('<ButtonRelease>', lambda event: self._widget_released(self._notification_label))
+        self._notification_label.grid(row=0, column=2, padx=(3, 3), sticky='NWSE')
+
         # For switching between light/dark mode
         self._theme_mode_label = tk.Label(self._settings_frame, borderwidth=0, highlightthickness=0)
         self._theme_mode_label.bind('<Button-1>', self._set_theme_mode)
-        self._theme_mode_label.grid(row=0, column=2, padx=(3, 3), sticky='NWSE')
+        self._theme_mode_label.grid(row=0, column=3, padx=(3, 3), sticky='NWSE')
 
         # For how-to/help
         self._how_to_label = tk.Label(self._settings_frame, text='?', borderwidth=0, highlightthickness=0)
         self._how_to_label.bind('<Button-1>', self._show_how_to)
-        self._how_to_label.grid(row=0, column=3, padx=(3, 0), sticky='NWSE')
+        self._how_to_label.grid(row=0, column=4, padx=(3, 0), sticky='NWSE')
 
     def _schedule_read(self, file_name):
         """
