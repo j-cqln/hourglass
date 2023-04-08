@@ -220,44 +220,44 @@ class WeekWidget:
         key: Tuple of strings, (yyyy, mm, dd)
         event_id: unique identifier of the event, UUID, string
         """
-        #try:
-        # Retrieve event info
-        value = self._parent.schedule.get(key)
-        event_info = value.get(event_id)
+        try:
+            # Retrieve event info
+            value = self._parent.schedule.get(key)
+            event_info = value.get(event_id)
 
-        if value is not None and event_info is not None:
-            popup = EventMenu(self._parent, self._root, key, event_info)
-            result = popup.show()
-            popup = None
+            if value is not None and event_info is not None:
+                popup = EventMenu(self._parent, self._root, key, event_info)
+                result = popup.show()
+                popup = None
 
-            # Edit or remove event(s) based on user response
-            if result[0] == 'remove':
-                del self._parent.schedule[key][event_id]
+                # Edit or remove event(s) based on user response
+                if result[0] == 'remove':
+                    del self._parent.schedule[key][event_id]
 
-            elif result[0] == 'remove_all':
-                keys_list = []
-                recurrence_id = event_info.get('recurrence_id')
+                elif result[0] == 'remove_all':
+                    keys_list = []
+                    recurrence_id = event_info.get('recurrence_id')
 
-                for date_key, events in self._parent.schedule.items():
-                    for uuid_key, info in events.items():
-                        if info.get('recurrence_id') == recurrence_id:
-                            keys_list.append((date_key, uuid_key))
+                    for date_key, events in self._parent.schedule.items():
+                        for uuid_key, info in events.items():
+                            if info.get('recurrence_id') == recurrence_id:
+                                keys_list.append((date_key, uuid_key))
+                    
+                    for item in keys_list:
+                        del self._parent.schedule[item[0]][item[1]]
+
+                elif result[0] == 'edit':
+                    self._parent.schedule[key][event_id] = result[1]
                 
-                for item in keys_list:
-                    del self._parent.schedule[item[0]][item[1]]
+                elif result[0] == 'edit_all':
+                    recurrence_id = event_info.get('recurrence_id')
 
-            elif result[0] == 'edit':
-                self._parent.schedule[key][event_id] = result[1]
-            
-            elif result[0] == 'edit_all':
-                recurrence_id = event_info.get('recurrence_id')
-
-                for date_key, events in self._parent.schedule.items():
-                    for uuid_key, info in events.items():
-                        if info.get('recurrence_id') == recurrence_id:
-                            self._parent.schedule[date_key][uuid_key] = result[1]
-        #except Exception as e:
-            #show_error('no such scheduled event.')
+                    for date_key, events in self._parent.schedule.items():
+                        for uuid_key, info in events.items():
+                            if info.get('recurrence_id') == recurrence_id:
+                                self._parent.schedule[date_key][uuid_key] = result[1]
+        except Exception as e:
+            show_error('no such scheduled event.')
         
         # Update displayed week
         self.update_week()

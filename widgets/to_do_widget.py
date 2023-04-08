@@ -91,26 +91,26 @@ class ToDoWidget:
         total: The number of items in the to-do list, int
         item: Item to be removed, string
         """
-        #try:
-        # Retrieve item key
-        key = self._parent.to_do_list[index].get('key')
+        try:
+            # Retrieve item key
+            key = self._parent.to_do_list[index].get('key')
 
-        if key is not None:
-            popup = ToDoMenu(self._parent, self._root, index, total, item)
-            result = popup.show()
-            popup = None
+            if key is not None:
+                popup = ToDoMenu(self._parent, self._root, index, total, item)
+                result = popup.show()
+                popup = None
 
-            # Edit or remove item based on user response
-            if result[0] == 'remove':
-                if self._parent.to_do_list[index]['key'] == key:
-                    del self._parent.to_do_list[index]
+                # Edit or remove item based on user response
+                if result[0] == 'remove':
+                    if self._parent.to_do_list[index]['key'] == key:
+                        del self._parent.to_do_list[index]
 
-            elif result[0] == 'edit':
-                if self._parent.to_do_list[index]['key'] == key:
-                    del self._parent.to_do_list[index]
-                    self._parent.to_do_list.insert(result[1], result[2])
-        #except Exception as e:
-            #show_error('no such to-do list task.')
+                elif result[0] == 'edit':
+                    if self._parent.to_do_list[index]['key'] == key:
+                        del self._parent.to_do_list[index]
+                        self._parent.to_do_list.insert(result[1], result[2])
+        except Exception as e:
+            show_error('no such to-do list task.')
         
         # Update displayed to-do list
         self._update_to_do()
